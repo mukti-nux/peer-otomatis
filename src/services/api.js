@@ -225,6 +225,21 @@ export const deleteMapel = async (id, instansiId) => {
 // ============================================
 
 /**
+ * Mengirim notifikasi WA untuk PR
+ * @param {Object} payload - Data untuk kirim WA
+ * @returns {Promise} Response dari webhook
+ */
+export const kirimWA = async (payload) => {
+  try {
+    const response = await api.post('/kirim-wa', payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error sending WA notification:', error);
+    throw error;
+  }
+};
+
+/**
  * Membuat PR baru
  * @param {Object} prData - Data PR
  * @returns {Promise} Response dari webhook
@@ -232,6 +247,29 @@ export const deleteMapel = async (id, instansiId) => {
 export const createPR = async (prData) => {
   try {
     const response = await api.post('/create-pr', prData);
+    
+    // Jika kirim_wa true dan response sukses, langsung kirim notifikasi WA
+    if (response.data?.status === 'success' && prData.kirim_wa === true && response.data?.data) {
+      const pr = response.data.data;
+      try {
+        await kirimWA({
+          kelas: prData.kelas,
+          instansi_id: prData.instansi_id,
+          pr_id: pr.id,
+          judul: pr.judul,
+          mapel: prData.mapel,
+          deskripsi: prData.deskripsi || '',
+          deadline: prData.deadline,
+          pesan: `📚 *PR BARU — ${prData.kelas}*\n\nMapel     : ${prData.mapel}\nJudul     : ${pr.judul}\nDeskripsi : ${prData.deskripsi || '-'}\nDeadline  : ${prData.deadline} ⏰\n\nSegera dikerjakan ya! 💪\n— Sistem PR Sekolah`
+        });
+        // Update wa_status di response
+        response.data.wa_status = 'terkirim';
+      } catch (waError) {
+        console.error('Error sending WA notification:', waError);
+        response.data.wa_status = 'failed';
+      }
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Error creating PR:', error);

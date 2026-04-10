@@ -90,7 +90,7 @@ const PRModal = ({ isOpen, onClose, onSubmit, editData = null, loading = false, 
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>Batal</Button>
           <Button variant="primary" onClick={handleSubmit} loading={loading}>
-            {isEditMode ? 'Simpan Perubahan' : 'Simpan'}
+            {isEditMode ? 'Simpan Perubahan' : (formData.kirim_wa ? 'Simpan & Kirim WA' : 'Simpan')}
           </Button>
         </>
       }
