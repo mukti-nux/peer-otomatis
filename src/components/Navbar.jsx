@@ -12,6 +12,7 @@ const Navbar = ({ user }) => {
   };
   
   const isManajemenActive = location.pathname === '/manajemen';
+  const isNotifikasiActive = location.pathname === '/notifikasi-wa';
   const isDashboardActive = location.pathname === '/dashboard-guru';
   
   return (
@@ -49,6 +50,14 @@ const Navbar = ({ user }) => {
                 }`}
               >
                 ⚙️ Manajemen
+              </button>
+              <button
+                onClick={() => navigate('/notifikasi-wa')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isNotifikasiActive ? 'bg-white/20' : 'hover:bg-white/10'
+                }`}
+              >
+                📱 Notifikasi WA
               </button>
             </div>
           )}
@@ -89,6 +98,14 @@ const Navbar = ({ user }) => {
               }`}
             >
               ⚙️ Manajemen
+            </button>
+            <button
+              onClick={() => navigate('/notifikasi-wa')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
+                isNotifikasiActive ? 'bg-white/20' : 'hover:bg-white/10'
+              }`}
+            >
+              📱 Notif WA
             </button>
           </div>
         )}

@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import DashboardGuru from './pages/DashboardGuru';
 import DashboardSiswa from './pages/DashboardSiswa';
 import Manajemen from './pages/Manajemen';
+import NotifikasiWA from './pages/NotifikasiWA';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const session = localStorage.getItem('user_session');
@@ -52,6 +53,14 @@ const App = () => {
           element={
             <ProtectedRoute allowedRole="guru">
               <Manajemen />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifikasi-wa"
+          element={
+            <ProtectedRoute allowedRole="guru">
+              <NotifikasiWA />
             </ProtectedRoute>
           }
         />
