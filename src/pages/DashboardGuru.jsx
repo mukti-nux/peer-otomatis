@@ -4,12 +4,8 @@ import Navbar from '../components/Navbar';
 import Button from '../components/Button';
 import PRTable from '../components/PRTable';
 import PRModal from '../components/PRModal';
-import WAPreviewModal from '../components/WAPreviewModal';
-import WALogTable from '../components/WALogTable';
 import { ToastContainer, useToast } from '../components/Toast';
-import { createPR, getAllPR, updatePR, deletePR, resendWANotification } from '../services/api';
-
-const KELAS_OPTIONS = ['X-TKJ', 'X-RPL', 'X-MM', 'XI-TKJ', 'XI-RPL', 'XI-MM', 'XII-TKJ', 'XII-RPL', 'XII-MM'];
+import { createPR, getAllPR, updatePR, deletePR, getKelas, getMapel } from '../services/api';
 
 const DashboardGuru = () => {
   const navigate = useNavigate();
@@ -17,45 +13,51 @@ const DashboardGuru = () => {
   
   const [user, setUser] = useState(null);
   const [prList, setPrList] = useState([]);
-  const [waLogs, setWaLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
-  
   const [isPRModalOpen, setIsPRModalOpen] = useState(false);
-  const [isWAPreviewOpen, setIsWAPreviewOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  
   const [editData, setEditData] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [pendingPRData, setPendingPRData] = useState(null);
-  
   const [filterKelas, setFilterKelas] = useState('');
-  const [activeTab, setActiveTab] = useState('pr');
+  const [kelasList, setKelasList] = useState([]);
   
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData || JSON.parse(userData).role !== 'guru') {
+    const session = localStorage.getItem('user_session');
+    if (!session) {
       navigate('/');
       return;
     }
-    setUser(JSON.parse(userData));
-    fetchData();
+    const userData = JSON.parse(session);
+    if (userData.role !== 'guru') {
+      navigate('/');
+      return;
+    }
+    setUser(userData);
+    fetchKelas(userData.instansi_id);
+    fetchData(userData.instansi_id);
   }, [navigate]);
   
-  const fetchData = async () => {
+  const fetchKelas = async (instansiId) => {
+    try {
+      const response = await getKelas(instansiId);
+      if (response?.status === 'success' && response?.data) {
+        setKelasList(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching kelas:', err);
+    }
+  };
+  
+  const fetchData = async (instansiId) => {
     setLoading(true);
     try {
-      const response = await getAllPR();
-      console.log('API Response:', response);
-      
+      const response = await getAllPR(instansiId);
       if (response?.status === 'success' && response?.data) {
         setPrList(response.data);
       } else {
         setPrList([]);
       }
-      
-      const savedLogs = localStorage.getItem('wa_logs');
-      setWaLogs(savedLogs ? JSON.parse(savedLogs) : []);
     } catch (error) {
       console.error('Error fetching PR:', error);
       toast.error('Gagal terhubung ke server, coba lagi');
@@ -81,25 +83,16 @@ const DashboardGuru = () => {
   };
   
   const handlePRSubmit = async (formData) => {
-    if (formData.kirim_wa && !editData) {
-      setPendingPRData(formData);
-      setIsWAPreviewOpen(true);
-    } else {
-      await submitPR(formData, editData?.id);
-    }
-  };
-  
-  const submitPR = async (formData, editId = null) => {
     setSubmitLoading(true);
     try {
       const payload = {
         ...formData,
-        guru_id: 1,
-        ...(editId && { id: editId })
+        guru_id: user.id,
+        instansi_id: user.instansi_id
       };
       
-      if (editId) {
-        await updatePR(payload);
+      if (editData) {
+        await updatePR({ ...payload, id: editData.id });
         toast.success('PR berhasil diperbarui');
       } else {
         await createPR(payload);
@@ -107,19 +100,13 @@ const DashboardGuru = () => {
       }
       
       setIsPRModalOpen(false);
-      setIsWAPreviewOpen(false);
-      setPendingPRData(null);
-      fetchData();
+      fetchData(user.instansi_id);
     } catch (error) {
       console.error('Error saving PR:', error);
       toast.error('Gagal menyimpan PR');
     } finally {
       setSubmitLoading(false);
     }
-  };
-  
-  const handleWAPreviewConfirm = async () => {
-    await submitPR(pendingPRData);
   };
   
   const handleConfirmDelete = async () => {
@@ -130,24 +117,10 @@ const DashboardGuru = () => {
       toast.success('PR berhasil dihapus');
       setIsDeleteConfirmOpen(false);
       setDeleteTarget(null);
-      fetchData();
+      fetchData(user.instansi_id);
     } catch (error) {
       console.error('Error deleting PR:', error);
       toast.error('Gagal menghapus PR');
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-  
-  const handleResendWA = async (prId) => {
-    setSubmitLoading(true);
-    try {
-      await resendWANotification(prId);
-      toast.success('Notifikasi WA berhasil dikirim ulang');
-      fetchData();
-    } catch (error) {
-      console.error('Error resending WA:', error);
-      toast.error('Gagal mengirim notifikasi WA');
     } finally {
       setSubmitLoading(false);
     }
@@ -170,61 +143,36 @@ const DashboardGuru = () => {
           <p className="text-slate-500 mt-1">Kelola Pekerjaan Rumah untuk siswa</p>
         </div>
         
-        <div className="flex gap-4 mb-6 border-b border-slate-200">
-          <button
-            onClick={() => setActiveTab('pr')}
-            className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'pr' ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            📋 Daftar PR
-          </button>
-          <button
-            onClick={() => setActiveTab('wa')}
-            className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'wa' ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            📱 Riwayat WhatsApp
-          </button>
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <select
+              value={filterKelas}
+              onChange={(e) => setFilterKelas(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">Semua Kelas</option>
+              {kelasList.map(kelas => (
+                <option key={kelas.id} value={kelas.nama}>{kelas.nama}</option>
+              ))}
+            </select>
+            {filterKelas && (
+              <span className="text-sm text-slate-500">{filteredPRList.length} PR untuk {filterKelas}</span>
+            )}
+          </div>
+          <Button variant="primary" onClick={handleAddPR}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Tambah PR
+          </Button>
         </div>
         
-        {activeTab === 'pr' ? (
-          <>
-            <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-              <div className="flex items-center gap-4">
-                <select
-                  value={filterKelas}
-                  onChange={(e) => setFilterKelas(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                >
-                  <option value="">Semua Kelas</option>
-                  {KELAS_OPTIONS.map(kelas => (
-                    <option key={kelas} value={kelas}>{kelas}</option>
-                  ))}
-                </select>
-                {filterKelas && (
-                  <span className="text-sm text-slate-500">{filteredPRList.length} PR untuk {filterKelas}</span>
-                )}
-              </div>
-              <Button variant="primary" onClick={handleAddPR}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Tambah PR
-              </Button>
-            </div>
-            
-            <PRTable 
-              prList={filteredPRList} 
-              onEdit={handleEditPR}
-              onDelete={handleDeletePR}
-              loading={loading}
-            />
-          </>
-        ) : (
-          <WALogTable 
-            logs={waLogs} 
-            onResend={handleResendWA}
-            loading={loading}
-          />
-        )}
+        <PRTable 
+          prList={filteredPRList} 
+          onEdit={handleEditPR}
+          onDelete={handleDeletePR}
+          loading={loading}
+        />
       </div>
       
       <PRModal
@@ -233,15 +181,8 @@ const DashboardGuru = () => {
         onSubmit={handlePRSubmit}
         editData={editData}
         loading={submitLoading}
-      />
-      
-      <WAPreviewModal
-        isOpen={isWAPreviewOpen}
-        onClose={() => setIsWAPreviewOpen(false)}
-        onConfirm={handleWAPreviewConfirm}
-        onCancel={() => { setIsWAPreviewOpen(false); setPendingPRData(null); }}
-        prData={pendingPRData}
-        loading={submitLoading}
+        kelasList={kelasList}
+        user={user}
       />
       
       {isDeleteConfirmOpen && deleteTarget && (

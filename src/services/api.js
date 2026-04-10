@@ -1,8 +1,6 @@
 import axios from 'axios';
 
 // Base URL untuk n8n webhook
-// Untuk development lokal: http://localhost:5678/webhook
-// Untuk production: https://n8n.muktilabs.my.id/webhook
 const BASE_URL = 'https://n8n.muktilabs.my.id/webhook';
 
 // Create axios instance dengan konfigurasi default
@@ -37,6 +35,195 @@ api.interceptors.response.use(
   }
 );
 
+// ============================================
+// ENDPOINT AUTH
+// ============================================
+
+/**
+ * Mengambil daftar instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const getInstansi = async () => {
+  try {
+    const response = await api.get('/get-instansi');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching instansi:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mengambil daftar users (untuk dropdown guru di login)
+ * @param {number} instansiId - ID instansi
+ * @param {string} role - Role user (guru/siswa)
+ * @returns {Promise} Response dari webhook
+ */
+export const getUsers = async (instansiId, role) => {
+  try {
+    const response = await api.get('/get-users', { params: { instansi_id: instansiId, role } });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    throw error;
+  }
+};
+
+/**
+ * Login guru
+ * @param {number} instansiId - ID instansi
+ * @param {number} userId - ID user
+ * @param {string} kodeUnik - Kode unik
+ * @returns {Promise} Response dari webhook
+ */
+export const loginGuru = async (instansiId, userId, kodeUnik) => {
+  try {
+    const response = await api.post('/login', {
+      instansi_id: instansiId,
+      user_id: userId,
+      kode_unik: kodeUnik
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error logging in guru:', error);
+    throw error;
+  }
+};
+
+/**
+ * Register/masuk siswa
+ * @param {Object} data - Data siswa
+ * @returns {Promise} Response dari webhook
+ */
+export const registerSiswa = async (data) => {
+  try {
+    const response = await api.post('/register-siswa', {
+      nama: data.nama,
+      kelas: data.kelas,
+      instansi_id: data.instansi_id,
+      nisn: data.nisn || ''
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error registering siswa:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// ENDPOINT KELAS & MAPEL
+// ============================================
+
+/**
+ * Mengambil daftar kelas berdasarkan instansi
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const getKelas = async (instansiId) => {
+  try {
+    const response = await api.get('/get-kelas', { params: { instansi_id: instansiId } });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching kelas:', error);
+    throw error;
+  }
+};
+
+/**
+ * Menambah kelas baru
+ * @param {string} nama - Nama kelas
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const addKelas = async (nama, instansiId) => {
+  try {
+    const response = await api.post('/add-kelas', {
+      nama,
+      instansi_id: instansiId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding kelas:', error);
+    throw error;
+  }
+};
+
+/**
+ * Menghapus kelas
+ * @param {number} id - ID kelas
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const deleteKelas = async (id, instansiId) => {
+  try {
+    const response = await api.post('/delete-kelas', {
+      id,
+      instansi_id: instansiId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting kelas:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mengambil daftar mapel berdasarkan instansi
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const getMapel = async (instansiId) => {
+  try {
+    const response = await api.get('/get-mapel', { params: { instansi_id: instansiId } });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching mapel:', error);
+    throw error;
+  }
+};
+
+/**
+ * Menambah mapel baru
+ * @param {string} nama - Nama mapel
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const addMapel = async (nama, instansiId) => {
+  try {
+    const response = await api.post('/add-mapel', {
+      nama,
+      instansi_id: instansiId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding mapel:', error);
+    throw error;
+  }
+};
+
+/**
+ * Menghapus mapel
+ * @param {number} id - ID mapel
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const deleteMapel = async (id, instansiId) => {
+  try {
+    const response = await api.post('/delete-mapel', {
+      id,
+      instansi_id: instansiId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting mapel:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// ENDPOINT PR
+// ============================================
+
 /**
  * Membuat PR baru
  * @param {Object} prData - Data PR
@@ -53,16 +240,22 @@ export const createPR = async (prData) => {
 };
 
 /**
- * Mengambil daftar PR berdasarkan kelas
+ * Mengambil daftar PR berdasarkan kelas dan instansi
  * @param {string} kelas - Nama kelas (WAJIB)
+ * @param {number} instansiId - ID instansi
  * @returns {Promise} Response dari webhook
  */
-export const getPRByKelas = async (kelas) => {
+export const getPRByKelas = async (kelas, instansiId) => {
   try {
     if (!kelas) {
       throw new Error('Parameter kelas wajib diisi');
     }
-    const response = await api.get('/get-pr', { params: { kelas } });
+    const response = await api.get('/get-pr', { 
+      params: { 
+        kelas,
+        instansi_id: instansiId 
+      } 
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching PR:', error);
@@ -72,23 +265,32 @@ export const getPRByKelas = async (kelas) => {
 
 /**
  * Mengambil semua PR (untuk guru - semua kelas)
+ * @param {number} instansiId - ID instansi
  * @returns {Promise} Response dari webhook
  */
-export const getAllPR = async () => {
+export const getAllPR = async (instansiId) => {
   try {
-    // Guru mengambil PR dari semua kelas yang diampu
-    // Ambil dari semua kelas yang tersedia
-    const KELAS_LIST = ['X-TKJ', 'X-RPL', 'X-MM', 'XI-TKJ', 'XI-RPL', 'XI-MM', 'XII-TKJ', 'XII-RPL', 'XII-MM'];
+    // Ambil daftar kelas dari API
+    const kelasResponse = await getKelas(instansiId);
+    if (kelasResponse?.status !== 'success' || !kelasResponse?.data) {
+      return { status: 'success', data: [] };
+    }
+    
     const allPR = [];
     
-    for (const kelas of KELAS_LIST) {
+    for (const kelasItem of kelasResponse.data) {
       try {
-        const response = await api.get('/get-pr', { params: { kelas } });
+        const response = await api.get('/get-pr', { 
+          params: { 
+            kelas: kelasItem.nama,
+            instansi_id: instansiId
+          } 
+        });
         if (response.data?.status === 'success' && response.data?.data) {
           allPR.push(...response.data.data);
         }
       } catch (err) {
-        console.warn(`Failed to fetch PR for kelas ${kelas}:`, err);
+        console.warn(`Failed to fetch PR for kelas ${kelasItem.nama}:`, err);
       }
     }
     
@@ -127,21 +329,6 @@ export const deletePR = async (id) => {
     return response.data;
   } catch (error) {
     console.error('Error deleting PR:', error);
-    throw error;
-  }
-};
-
-/**
- * Mengirim ulang notifikasi WA
- * @param {number} prId - ID PR
- * @returns {Promise} Response dari webhook
- */
-export const resendWANotification = async (prId) => {
-  try {
-    const response = await api.post('/resend-wa', { pr_id: prId });
-    return response.data;
-  } catch (error) {
-    console.error('Error resending WA notification:', error);
     throw error;
   }
 };

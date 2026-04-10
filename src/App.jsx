@@ -3,23 +3,22 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import DashboardGuru from './pages/DashboardGuru';
 import DashboardSiswa from './pages/DashboardSiswa';
+import Manajemen from './pages/Manajemen';
 
-// Protected Route components
 const ProtectedRoute = ({ children, allowedRole }) => {
-  const userData = localStorage.getItem('user');
+  const session = localStorage.getItem('user_session');
   
-  if (!userData) {
+  if (!session) {
     return <Navigate to="/" replace />;
   }
   
-  const user = JSON.parse(userData);
+  const user = JSON.parse(session);
   
   if (allowedRole && user.role !== allowedRole) {
-    // Redirect to appropriate dashboard based on role
     if (user.role === 'guru') {
-      return <Navigate to="/guru" replace />;
+      return <Navigate to="/dashboard-guru" replace />;
     } else {
-      return <Navigate to="/siswa" replace />;
+      return <Navigate to="/dashboard-siswa" replace />;
     }
   }
   
@@ -30,12 +29,10 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
         <Route path="/" element={<Login />} />
         
-        {/* Protected Routes */}
         <Route
-          path="/guru"
+          path="/dashboard-guru"
           element={
             <ProtectedRoute allowedRole="guru">
               <DashboardGuru />
@@ -43,15 +40,22 @@ const App = () => {
           }
         />
         <Route
-          path="/siswa"
+          path="/dashboard-siswa"
           element={
             <ProtectedRoute allowedRole="siswa">
               <DashboardSiswa />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/manajemen"
+          element={
+            <ProtectedRoute allowedRole="guru">
+              <Manajemen />
+            </ProtectedRoute>
+          }
+        />
         
-        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

@@ -15,36 +15,33 @@ const DashboardSiswa = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData || JSON.parse(userData).role !== 'siswa') {
+    const session = localStorage.getItem('user_session');
+    if (!session) {
       navigate('/');
       return;
     }
-    const parsedUser = JSON.parse(userData);
+    const parsedUser = JSON.parse(session);
+    if (parsedUser.role !== 'siswa') {
+      navigate('/');
+      return;
+    }
     setUser(parsedUser);
     
     // Load completed PRs from localStorage
-    // Key: pr_status_[pr_id]_[siswa_id]
     const savedCompleted = localStorage.getItem(`completed_prs_${parsedUser.kelas}`);
     if (savedCompleted) {
       setCompletedPRs(JSON.parse(savedCompleted));
     }
     
-    fetchData(parsedUser.kelas);
+    fetchData(parsedUser.kelas, parsedUser.instansi_id);
   }, [navigate]);
   
-  const fetchData = async (kelas) => {
+  const fetchData = async (kelas, instansiId) => {
     setLoading(true);
     try {
-      const response = await getPRByKelas(kelas);
-      console.log('API Response:', response);
-      
-      // Handle response format dari API:
-      // { status: "success", kelas: "XI-RPL", total: 2, data: [...] }
+      const response = await getPRByKelas(kelas, instansiId);
       if (response?.status === 'success' && response?.data) {
-        const data = Array.isArray(response.data) ? response.data : [];
-        // Sort by deadline (nearest first)
-        const sorted = data.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+        const sorted = response.data.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
         setPrList(sorted);
       } else {
         setPrList([]);
@@ -66,17 +63,15 @@ const DashboardSiswa = () => {
       newCompleted = completedPRs.filter(id => id !== prId);
     }
     setCompletedPRs(newCompleted);
-    // Simpan status ke localStorage
     localStorage.setItem(`completed_prs_${user?.kelas}`, JSON.stringify(newCompleted));
     
     if (isCompleted) {
-      toast.success('PR ditandai selesai ✓');
+      toast.success('PR ditandai selesai');
     }
   };
   
   if (!user) return null;
   
-  // Stats
   const totalPR = prList.length;
   const completedCount = prList.filter(pr => completedPRs.includes(pr.id)).length;
   const pendingCount = totalPR - completedCount;
@@ -87,7 +82,6 @@ const DashboardSiswa = () => {
       <ToastContainer toasts={toast.toasts} removeToast={toast.removeToast} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-slate-800">
             Halo {user.nama} — Kelas {user.kelas}
@@ -95,7 +89,6 @@ const DashboardSiswa = () => {
           <p className="text-slate-500 mt-1">Berikut daftar PR yang harus kamu kerjakan</p>
         </div>
         
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-primary">
             <p className="text-sm text-slate-500">Total PR</p>
@@ -111,7 +104,6 @@ const DashboardSiswa = () => {
           </div>
         </div>
         
-        {/* PR Cards Grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

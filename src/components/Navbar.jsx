@@ -1,20 +1,23 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Button from './Button';
 
 const Navbar = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    localStorage.removeItem('user_session');
     navigate('/');
   };
+  
+  const isManajemenActive = location.pathname === '/manajemen';
+  const isDashboardActive = location.pathname === '/dashboard-guru';
   
   return (
     <nav className="bg-primary text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Title */}
           <div className="flex items-center gap-3">
             <div className="bg-white/10 p-2 rounded-lg">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,7 +32,27 @@ const Navbar = ({ user }) => {
             </div>
           </div>
           
-          {/* User Info */}
+          {user?.role === 'guru' && (
+            <div className="hidden md:flex items-center gap-1">
+              <button
+                onClick={() => navigate('/dashboard-guru')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isDashboardActive ? 'bg-white/20' : 'hover:bg-white/10'
+                }`}
+              >
+                📋 Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/manajemen')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isManajemenActive ? 'bg-white/20' : 'hover:bg-white/10'
+                }`}
+              >
+                ⚙️ Manajemen
+              </button>
+            </div>
+          )}
+          
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium">{user?.nama}</p>
@@ -48,6 +71,27 @@ const Navbar = ({ user }) => {
             </Button>
           </div>
         </div>
+        
+        {user?.role === 'guru' && (
+          <div className="md:hidden flex gap-1 pb-3">
+            <button
+              onClick={() => navigate('/dashboard-guru')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
+                isDashboardActive ? 'bg-white/20' : 'hover:bg-white/10'
+              }`}
+            >
+              📋 Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/manajemen')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
+                isManajemenActive ? 'bg-white/20' : 'hover:bg-white/10'
+              }`}
+            >
+              ⚙️ Manajemen
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );
