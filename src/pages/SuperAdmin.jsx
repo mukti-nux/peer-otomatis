@@ -35,7 +35,7 @@ const SuperAdmin = () => {
     try {
       const response = await getInstansi();
       if (response?.status === 'success') {
-        setInstansiList(response.data || []);
+        setInstansiList(response.data?.data || []);
       }
     } catch (err) {
       console.error('Error loading instansi:', err);
@@ -127,7 +127,7 @@ const SuperAdmin = () => {
     try {
       const response = await getUsers(selectedGuruInstansi, 'guru');
       if (response?.status === 'success') {
-        setGuruList(response.data || []);
+        setGuruList(response.data?.data || []);
       }
     } catch (err) {
       console.error('Error loading guru:', err);
@@ -232,7 +232,7 @@ const SuperAdmin = () => {
       const response = await getUsers(selectedSiswaInstansi, 'siswa');
       if (response?.status === 'success') {
         // Filter by kelas on frontend (API might not support kelas filter)
-        const filtered = (response.data || []).filter(s => s.kelas === selectedSiswaKelas);
+        const filtered = (response.data?.data || []).filter(s => s.kelas === selectedSiswaKelas);
         setSiswaList(filtered);
       }
     } catch (err) {
@@ -247,7 +247,7 @@ const SuperAdmin = () => {
     try {
       const response = await getKelas(selectedSiswaInstansi);
       if (response?.status === 'success') {
-        setSiswaKelasList(response.data || []);
+        setSiswaKelasList(response.data?.data || []);
       }
     } catch (err) {
       console.error('Error loading kelas:', err);
@@ -302,7 +302,7 @@ const SuperAdmin = () => {
     try {
       const response = await getKelas(selectedKelasInstansi);
       if (response?.status === 'success') {
-        setKelasList(response.data || []);
+        setKelasList(response.data?.data || []);
       }
     } catch (err) {
       console.error('Error loading kelas:', err);
@@ -379,7 +379,7 @@ const SuperAdmin = () => {
     try {
       const response = await getMapel(selectedMapelInstansi);
       if (response?.status === 'success') {
-        setMapelList(response.data || []);
+        setMapelList(response.data?.data || []);
       }
     } catch (err) {
       console.error('Error loading mapel:', err);
@@ -971,7 +971,7 @@ const SuperAdmin = () => {
               </div>
               <Button onClick={() => { setKelasForm({ nama: '' }); setShowAddKelasModal(true); }} disabled={!selectedKelasInstansi}>Tambah Kelas</Button>
             </div>
-
+          
             <FilterBar
               showInstansi={true}
               selectedInstansi={selectedKelasInstansi}
