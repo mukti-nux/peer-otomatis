@@ -241,12 +241,18 @@ export const kirimWA = async (payload) => {
 
 /**
  * Membuat PR baru
- * @param {Object} prData - Data PR
+ * @param {Object} prData - Data PR (harus包含 nama_guru)
  * @returns {Promise} Response dari webhook
  */
 export const createPR = async (prData) => {
   try {
-    const response = await api.post('/create-pr', prData);
+    // Kirim nama_guru ke backend
+    const payload = {
+      ...prData,
+      nama_guru: prData.nama_guru || ''
+    };
+    
+    const response = await api.post('/create-pr', payload);
     
     // Jika kirim_wa true dan response sukses, langsung kirim notifikasi WA
     if (response.data?.status === 'success' && prData.kirim_wa === true && response.data?.data) {
@@ -260,7 +266,8 @@ export const createPR = async (prData) => {
           mapel: prData.mapel,
           deskripsi: prData.deskripsi || '',
           deadline: prData.deadline,
-          pesan: `📚 *PR BARU — ${prData.kelas}*\n\nMapel     : ${prData.mapel}\nJudul     : ${pr.judul}\nDeskripsi : ${prData.deskripsi || '-'}\nDeadline  : ${prData.deadline} ⏰\n\nSegera dikerjakan ya! 💪\n— Sistem PR Sekolah`
+          nama_guru: prData.nama_guru || '',
+          pesan: `📚 *PR BARU — ${prData.kelas}*\n\nMapel     : ${prData.mapel}\nJudul     : ${pr.judul}\nDeskripsi : ${prData.deskripsi || '-'}\nDeadline  : ${prData.deadline} ⏰\nDari Guru : ${prData.nama_guru || '-'}\n\nSegera dikerjakan ya! 💪\n— Sistem PR Sekolah`
         });
         // Update wa_status di response
         response.data.wa_status = 'terkirim';

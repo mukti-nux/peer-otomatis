@@ -88,6 +88,7 @@ const DashboardGuru = () => {
       const payload = {
         ...formData,
         guru_id: user.id,
+        nama_guru: user.nama,
         instansi_id: user.instansi_id
       };
       
