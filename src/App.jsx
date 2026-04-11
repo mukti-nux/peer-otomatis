@@ -5,6 +5,8 @@ import DashboardGuru from './pages/DashboardGuru';
 import DashboardSiswa from './pages/DashboardSiswa';
 import Manajemen from './pages/Manajemen';
 import NotifikasiWA from './pages/NotifikasiWA';
+import SuperAdminLogin from './pages/SuperAdminLogin';
+import SuperAdmin from './pages/SuperAdmin';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const session = localStorage.getItem('user_session');
@@ -21,6 +23,17 @@ const ProtectedRoute = ({ children, allowedRole }) => {
     } else {
       return <Navigate to="/dashboard-siswa" replace />;
     }
+  }
+  
+  return children;
+};
+
+// Protected Route for SuperAdmin
+const SuperAdminProtectedRoute = ({ children }) => {
+  const session = localStorage.getItem('superadmin_session');
+  
+  if (!session) {
+    return <Navigate to="/super-admin/login" replace />;
   }
   
   return children;
@@ -62,6 +75,17 @@ const App = () => {
             <ProtectedRoute allowedRole="guru">
               <NotifikasiWA />
             </ProtectedRoute>
+          }
+        />
+        
+        {/* SuperAdmin Routes */}
+        <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+        <Route
+          path="/super-admin"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdmin />
+            </SuperAdminProtectedRoute>
           }
         />
         

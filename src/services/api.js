@@ -110,6 +110,173 @@ export const registerSiswa = async (data) => {
   }
 };
 
+/// ============================================
+// SUPERADMIN - INSTANSI
+// ============================================
+
+/**
+ * Login Superadmin
+ * @param {string} username - Username
+ * @param {string} password - Password
+ * @returns {Promise} Response dari webhook
+ */
+export const loginSuperadmin = async (username, password) => {
+  try {
+    const response = await api.post('/superadmin-login', { username, password });
+    return response.data;
+  } catch (error) {
+    console.error('Error login superadmin:', error);
+    throw error;
+  }
+};
+
+/**
+ * Tambah instansi baru
+ * @param {Object} data - Data instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const addInstansi = async (data) => {
+  try {
+    const response = await api.post('/add-instansi', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding instansi:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update instansi
+ * @param {Object} data - Data instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const updateInstansi = async (data) => {
+  try {
+    const response = await api.post('/update-instansi', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating instansi:', error);
+    throw error;
+  }
+};
+
+/**
+ * Hapus instansi
+ * @param {number} id - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const deleteInstansi = async (id) => {
+  try {
+    const response = await api.post('/delete-instansi', { id });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting instansi:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// SUPERADMIN - GURU
+// ============================================
+
+/**
+ * Tambah guru baru
+ * @param {Object} data - Data guru
+ * @returns {Promise} Response dari webhook
+ */
+export const addGuru = async (data) => {
+  try {
+    const response = await api.post('/add-guru', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding guru:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update guru
+ * @param {Object} data - Data guru
+ * @returns {Promise} Response dari webhook
+ */
+export const updateGuru = async (data) => {
+  try {
+    const response = await api.post('/update-guru', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating guru:', error);
+    throw error;
+  }
+};
+
+/**
+ * Hapus guru
+ * @param {number} id - ID guru
+ * @returns {Promise} Response dari webhook
+ */
+export const deleteGuru = async (id) => {
+  try {
+    const response = await api.post('/delete-guru', { id });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting guru:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// SUPERADMIN - WA GROUPS
+// ============================================
+
+/**
+ * Ambil daftar WA groups
+ * @param {number} instansiId - ID instansi
+ * @returns {Promise} Response dari webhook
+ */
+export const getWAGroups = async (instansiId) => {
+  try {
+    const response = await api.get('/get-wa-groups', { params: { instansi_id: instansiId } });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching WA groups:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update WA group
+ * @param {Object} data - Data WA group
+ * @returns {Promise} Response dari webhook
+ */
+export const updateWAGroup = async (data) => {
+  try {
+    const response = await api.post('/update-wa-group', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating WA group:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// SUPERADMIN - WA LOGS
+// ============================================
+
+/**
+ * Ambil daftar WA logs
+ * @param {Object} params - Parameter filter
+ * @returns {Promise} Response dari webhook
+ */
+export const getWALogs = async (params) => {
+  try {
+    const response = await api.get('/get-wa-logs', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching WA logs:', error);
+    throw error;
+  }
+};
+
 // ============================================
 // ENDPOINT KELAS & MAPEL
 // ============================================
