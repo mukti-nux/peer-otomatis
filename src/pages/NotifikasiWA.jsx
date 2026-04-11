@@ -32,8 +32,8 @@ const NotifikasiWA = () => {
     setLoading(true);
     try {
       const data = await getPRAllKelas(instansiId);
-      // Filter PR dengan wa_status
-      const prWithWAStatus = data.filter(pr => pr.wa_status);
+      // Filter PR dengan wa_status (with null check)
+      const prWithWAStatus = (data || []).filter(pr => pr && pr.wa_status);
       // Sort by created_at descending (terbaru dulu)
       prWithWAStatus.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setPrList(prWithWAStatus);

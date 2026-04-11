@@ -53,55 +53,56 @@ const PRTable = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {prList.map((pr, index) => {
-              const deadlineColor = getDeadlineColor(pr.deadline);
-              return (
-                <tr key={pr.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-slate-600">{index + 1}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-800">{pr.mapel}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{pr.kelas}</td>
-                  <td className="px-4 py-3 text-sm text-slate-800 max-w-xs truncate">{pr.judul}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={deadlineColor}>
-                      {formatDate(pr.deadline)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {pr.wa_status === 'terkirim' ? (
-                      <Badge variant="success">✓ Terkirim</Badge>
-                    ) : pr.wa_status === 'pending' ? (
-                      <Badge variant="neutral">⏳ Pending</Badge>
-                    ) : (
-                      <Badge variant="neutral">-</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(pr)}
-                        className="text-primary hover:bg-primary/10"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(pr)}
-                        className="text-red-500 hover:bg-red-50"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+             {prList.map((pr, index) => {
+               if (!pr) return null;
+               const deadlineColor = pr.deadline ? getDeadlineColor(pr.deadline) : 'neutral';
+               return (
+                 <tr key={pr.id || index} className="hover:bg-slate-50 transition-colors">
+                   <td className="px-4 py-3 text-sm text-slate-600">{index + 1}</td>
+                   <td className="px-4 py-3 text-sm font-medium text-slate-800">{pr.mapel || '-'}</td>
+                   <td className="px-4 py-3 text-sm text-slate-600">{pr.kelas || '-'}</td>
+                   <td className="px-4 py-3 text-sm text-slate-800 max-w-xs truncate">{pr.judul || '-'}</td>
+                   <td className="px-4 py-3">
+                     <Badge variant={deadlineColor}>
+                       {pr.deadline ? formatDate(pr.deadline) : '-'}
+                     </Badge>
+                   </td>
+                   <td className="px-4 py-3">
+                     {pr.wa_status === 'terkirim' ? (
+                       <Badge variant="success">✓ Terkirim</Badge>
+                     ) : pr.wa_status === 'pending' ? (
+                       <Badge variant="neutral">⏳ Pending</Badge>
+                     ) : (
+                       <Badge variant="neutral">-</Badge>
+                     )}
+                   </td>
+                   <td className="px-4 py-3">
+                     <div className="flex items-center gap-2">
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => onEdit(pr)}
+                         className="text-primary hover:bg-primary/10"
+                       >
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                         </svg>
+                       </Button>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => onDelete(pr)}
+                         className="text-red-500 hover:bg-red-50"
+                       >
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                         </svg>
+                       </Button>
+                     </div>
+                   </td>
+                 </tr>
+               );
+             })}
           </tbody>
         </table>
       </div>
