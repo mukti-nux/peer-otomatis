@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import SuperAdminLayout from '../components/SuperAdminLayout';
 import FilterBar from '../components/FilterBar';
 import Modal from '../components/Modal';
@@ -12,7 +12,7 @@ import {
   getMapel, addMapel, deleteMapel,
   getWAGroups, updateWAGroup,
   getWALogs,
-  getPRByKelas, deletePR
+  getAllPR, deletePR
 } from '../services/api';
 
 const SuperAdmin = () => {
@@ -30,24 +30,25 @@ const SuperAdmin = () => {
   const [selectedInstansi, setSelectedInstansi] = useState(null);
   const [instansiForm, setInstansiForm] = useState({ nama: '', kode: '', alamat: '' });
 
-  const loadInstansi = async () => {
-    setInstansiLoading(true);
-    try {
-      const response = await getInstansi();
-      if (response?.status === 'success') {
-        setInstansiList(response.data?.data || []);
+  useEffect(() => {
+    const loadData = async () => {
+      setInstansiLoading(true);
+      try {
+        const data = await getInstansi();
+        setInstansiList(data);
+      } catch (err) {
+        console.error('Error loading instansi:', err);
+        error('Gagal memuat data instansi');
+      } finally {
+        setInstansiLoading(false);
       }
-    } catch (err) {
-      console.error('Error loading instansi:', err);
-      error('Gagal memuat data instansi');
-    } finally {
-      setInstansiLoading(false);
-    }
-  };
+    };
+    loadData();
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'instansi') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
@@ -57,15 +58,12 @@ const SuperAdmin = () => {
       return;
     }
     try {
-      const response = await addInstansi(instansiForm);
-      if (response?.status === 'success') {
-        success('Instansi berhasil ditambahkan');
-        setShowAddInstansiModal(false);
-        setInstansiForm({ nama: '', kode: '', alamat: '' });
-        loadInstansi();
-      } else {
-        error('Gagal menambahkan instansi');
-      }
+      await addInstansi(instansiForm);
+      success('Instansi berhasil ditambahkan');
+      setShowAddInstansiModal(false);
+      setInstansiForm({ nama: '', kode: '', alamat: '' });
+      const data = await getInstansi();
+      setInstansiList(data);
     } catch (err) {
       error('Gagal menambahkan instansi');
     }
@@ -77,14 +75,11 @@ const SuperAdmin = () => {
       return;
     }
     try {
-      const response = await updateInstansi({ id: selectedInstansi.id, ...instansiForm });
-      if (response?.status === 'success') {
-        success('Instansi berhasil diupdate');
-        setShowEditInstansiModal(false);
-        loadInstansi();
-      } else {
-        error('Gagal mengupdate instansi');
-      }
+      await updateInstansi({ id: selectedInstansi.id, ...instansiForm });
+      success('Instansi berhasil diupdate');
+      setShowEditInstansiModal(false);
+      const data = await getInstansi();
+      setInstansiList(data);
     } catch (err) {
       error('Gagal mengupdate instansi');
     }
@@ -92,14 +87,11 @@ const SuperAdmin = () => {
 
   const handleDeleteInstansi = async () => {
     try {
-      const response = await deleteInstansi(selectedInstansi.id);
-      if (response?.status === 'success') {
-        success('Instansi berhasil dihapus');
-        setShowDeleteInstansiModal(false);
-        loadInstansi();
-      } else {
-        error('Gagal menghapus instansi');
-      }
+      await deleteInstansi(selectedInstansi.id);
+      success('Instansi berhasil dihapus');
+      setShowDeleteInstansiModal(false);
+      const data = await getInstansi();
+      setInstansiList(data);
     } catch (err) {
       error('Gagal menghapus instansi');
     }
@@ -116,35 +108,26 @@ const SuperAdmin = () => {
   const [showEditGuruModal, setShowEditGuruModal] = useState(false);
   const [showDeleteGuruModal, setShowDeleteGuruModal] = useState(false);
   const [selectedGuru, setSelectedGuru] = useState(null);
-  const [guruForm, setGuruForm] = useState({ nama: '', kode_unik: '', instansi_id: '' });
-
-  const loadGuru = async () => {
-    if (!selectedGuruInstansi) {
-      setGuruList([]);
-      return;
-    }
-    setGuruLoading(true);
-    try {
-      const response = await getUsers(selectedGuruInstansi, 'guru');
-      if (response?.status === 'success') {
-        setGuruList(response.data?.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading guru:', err);
-    } finally {
-      setGuruLoading(false);
-    }
-  };
+  const [guruForm, setGuruForm] = useState({ nama: '', kode_unik: '' });
 
   useEffect(() => {
     if (activeTab === 'guru') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'guru' && selectedGuruInstansi) {
-      loadGuru();
+      setGuruLoading(true);
+      getUsers(selectedGuruInstansi, 'guru').then(data => {
+        setGuruList(data);
+        setGuruLoading(false);
+      }).catch(err => {
+        console.error('Error loading guru:', err);
+        setGuruLoading(false);
+      });
+    } else if (activeTab === 'guru' && !selectedGuruInstansi) {
+      setGuruList([]);
     }
   }, [activeTab, selectedGuruInstansi]);
 
@@ -157,20 +140,17 @@ const SuperAdmin = () => {
   }, [guruList, guruSearch]);
 
   const handleAddGuru = async () => {
-    if (!guruForm.nama || !guruForm.kode_unik || !guruForm.instansi_id) {
-      error('Semua field wajib diisi');
+    if (!guruForm.nama || !guruForm.kode_unik) {
+      error('Nama dan kode unik wajib diisi');
       return;
     }
     try {
-      const response = await addGuru(guruForm);
-      if (response?.status === 'success') {
-        success('Guru berhasil ditambahkan');
-        setShowAddGuruModal(false);
-        setGuruForm({ nama: '', kode_unik: '', instansi_id: selectedGuruInstansi });
-        loadGuru();
-      } else {
-        error('Gagal menambahkan guru');
-      }
+      await addGuru({ ...guruForm, instansi_id: selectedGuruInstansi });
+      success('Guru berhasil ditambahkan');
+      setShowAddGuruModal(false);
+      setGuruForm({ nama: '', kode_unik: '' });
+      const data = await getUsers(selectedGuruInstansi, 'guru');
+      setGuruList(data);
     } catch (err) {
       error('Gagal menambahkan guru');
     }
@@ -182,14 +162,11 @@ const SuperAdmin = () => {
       return;
     }
     try {
-      const response = await updateGuru({ id: selectedGuru.id, nama: guruForm.nama, kode_unik: guruForm.kode_unik });
-      if (response?.status === 'success') {
-        success('Guru berhasil diupdate');
-        setShowEditGuruModal(false);
-        loadGuru();
-      } else {
-        error('Gagal mengupdate guru');
-      }
+      await updateGuru({ id: selectedGuru.id, nama: guruForm.nama, kode_unik: guruForm.kode_unik });
+      success('Guru berhasil diupdate');
+      setShowEditGuruModal(false);
+      const data = await getUsers(selectedGuruInstansi, 'guru');
+      setGuruList(data);
     } catch (err) {
       error('Gagal mengupdate guru');
     }
@@ -197,14 +174,11 @@ const SuperAdmin = () => {
 
   const handleDeleteGuru = async () => {
     try {
-      const response = await deleteGuru(selectedGuru.id);
-      if (response?.status === 'success') {
-        success('Guru berhasil dihapus');
-        setShowDeleteGuruModal(false);
-        loadGuru();
-      } else {
-        error('Gagal menghapus guru');
-      }
+      await deleteGuru(selectedGuru.id);
+      success('Guru berhasil dihapus');
+      setShowDeleteGuruModal(false);
+      const data = await getUsers(selectedGuruInstansi, 'guru');
+      setGuruList(data);
     } catch (err) {
       error('Gagal menghapus guru');
     }
@@ -219,58 +193,33 @@ const SuperAdmin = () => {
   const [selectedSiswaInstansi, setSelectedSiswaInstansi] = useState(null);
   const [selectedSiswaKelas, setSelectedSiswaKelas] = useState(null);
   const [siswaKelasList, setSiswaKelasList] = useState([]);
-  const [showDeleteSiswaModal, setShowDeleteSiswaModal] = useState(false);
-  const [selectedSiswa, setSelectedSiswa] = useState(null);
-
-  const loadSiswa = async () => {
-    if (!selectedSiswaInstansi || !selectedSiswaKelas) {
-      setSiswaList([]);
-      return;
-    }
-    setSiswaLoading(true);
-    try {
-      const response = await getUsers(selectedSiswaInstansi, 'siswa');
-      if (response?.status === 'success') {
-        // Filter by kelas on frontend (API might not support kelas filter)
-        const filtered = (response.data?.data || []).filter(s => s.kelas === selectedSiswaKelas);
-        setSiswaList(filtered);
-      }
-    } catch (err) {
-      console.error('Error loading siswa:', err);
-    } finally {
-      setSiswaLoading(false);
-    }
-  };
-
-  const loadSiswaKelas = async () => {
-    if (!selectedSiswaInstansi) return;
-    try {
-      const response = await getKelas(selectedSiswaInstansi);
-      if (response?.status === 'success') {
-        setSiswaKelasList(response.data?.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading kelas:', err);
-    }
-  };
 
   useEffect(() => {
     if (activeTab === 'siswa') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'siswa' && selectedSiswaInstansi) {
-      loadSiswaKelas();
+      getKelas(selectedSiswaInstansi).then(setSiswaKelasList).catch(console.error);
       setSelectedSiswaKelas(null);
       setSiswaList([]);
     }
   }, [activeTab, selectedSiswaInstansi]);
 
   useEffect(() => {
-    if (activeTab === 'siswa' && selectedSiswaKelas) {
-      loadSiswa();
+    if (activeTab === 'siswa' && selectedSiswaInstansi && selectedSiswaKelas) {
+      setSiswaLoading(true);
+      getUsers(selectedSiswaInstansi, 'siswa', selectedSiswaKelas).then(data => {
+        setSiswaList(data);
+        setSiswaLoading(false);
+      }).catch(err => {
+        console.error('Error loading siswa:', err);
+        setSiswaLoading(false);
+      });
+    } else if (activeTab === 'siswa' && !selectedSiswaKelas) {
+      setSiswaList([]);
     }
   }, [activeTab, selectedSiswaKelas]);
 
@@ -293,51 +242,39 @@ const SuperAdmin = () => {
   const [selectedKelas, setSelectedKelas] = useState(null);
   const [kelasForm, setKelasForm] = useState({ nama: '' });
 
-  const loadKelas = async () => {
-    if (!selectedKelasInstansi) {
-      setKelasList([]);
-      return;
-    }
-    setKelasLoading(true);
-    try {
-      const response = await getKelas(selectedKelasInstansi);
-      if (response?.status === 'success') {
-        setKelasList(response.data?.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading kelas:', err);
-    } finally {
-      setKelasLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (activeTab === 'kelas') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'kelas' && selectedKelasInstansi) {
-      loadKelas();
+      setKelasLoading(true);
+      getKelas(selectedKelasInstansi).then(data => {
+        setKelasList(data);
+        setKelasLoading(false);
+      }).catch(err => {
+        console.error('Error loading kelas:', err);
+        setKelasLoading(false);
+      });
+    } else if (activeTab === 'kelas' && !selectedKelasInstansi) {
+      setKelasList([]);
     }
   }, [activeTab, selectedKelasInstansi]);
 
   const handleAddKelas = async () => {
-    if (!kelasForm.nama || !selectedKelasInstansi) {
+    if (!kelasForm.nama) {
       error('Nama kelas wajib diisi');
       return;
     }
     try {
-      const response = await addKelas(kelasForm.nama, selectedKelasInstansi);
-      if (response?.status === 'success') {
-        success('Kelas berhasil ditambahkan');
-        setShowAddKelasModal(false);
-        setKelasForm({ nama: '' });
-        loadKelas();
-      } else {
-        error('Gagal menambahkan kelas');
-      }
+      await addKelas(kelasForm.nama, selectedKelasInstansi);
+      success('Kelas berhasil ditambahkan');
+      setShowAddKelasModal(false);
+      setKelasForm({ nama: '' });
+      const data = await getKelas(selectedKelasInstansi);
+      setKelasList(data);
     } catch (err) {
       error('Gagal menambahkan kelas');
     }
@@ -345,14 +282,11 @@ const SuperAdmin = () => {
 
   const handleDeleteKelas = async () => {
     try {
-      const response = await deleteKelas(selectedKelas.id, selectedKelasInstansi);
-      if (response?.status === 'success') {
-        success('Kelas berhasil dihapus');
-        setShowDeleteKelasModal(false);
-        loadKelas();
-      } else {
-        error('Gagal menghapus kelas');
-      }
+      await deleteKelas(selectedKelas.id, selectedKelasInstansi);
+      success('Kelas berhasil dihapus');
+      setShowDeleteKelasModal(false);
+      const data = await getKelas(selectedKelasInstansi);
+      setKelasList(data);
     } catch (err) {
       error('Gagal menghapus kelas');
     }
@@ -370,33 +304,24 @@ const SuperAdmin = () => {
   const [selectedMapel, setSelectedMapel] = useState(null);
   const [mapelForm, setMapelForm] = useState({ nama: '' });
 
-  const loadMapel = async () => {
-    if (!selectedMapelInstansi) {
-      setMapelList([]);
-      return;
-    }
-    setMapelLoading(true);
-    try {
-      const response = await getMapel(selectedMapelInstansi);
-      if (response?.status === 'success') {
-        setMapelList(response.data?.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading mapel:', err);
-    } finally {
-      setMapelLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (activeTab === 'mapel') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'mapel' && selectedMapelInstansi) {
-      loadMapel();
+      setMapelLoading(true);
+      getMapel(selectedMapelInstansi).then(data => {
+        setMapelList(data);
+        setMapelLoading(false);
+      }).catch(err => {
+        console.error('Error loading mapel:', err);
+        setMapelLoading(false);
+      });
+    } else if (activeTab === 'mapel' && !selectedMapelInstansi) {
+      setMapelList([]);
     }
   }, [activeTab, selectedMapelInstansi]);
 
@@ -406,20 +331,17 @@ const SuperAdmin = () => {
   }, [mapelList, mapelSearch]);
 
   const handleAddMapel = async () => {
-    if (!mapelForm.nama || !selectedMapelInstansi) {
+    if (!mapelForm.nama) {
       error('Nama mapel wajib diisi');
       return;
     }
     try {
-      const response = await addMapel(mapelForm.nama, selectedMapelInstansi);
-      if (response?.status === 'success') {
-        success('Mapel berhasil ditambahkan');
-        setShowAddMapelModal(false);
-        setMapelForm({ nama: '' });
-        loadMapel();
-      } else {
-        error('Gagal menambahkan mapel');
-      }
+      await addMapel(mapelForm.nama, selectedMapelInstansi);
+      success('Mapel berhasil ditambahkan');
+      setShowAddMapelModal(false);
+      setMapelForm({ nama: '' });
+      const data = await getMapel(selectedMapelInstansi);
+      setMapelList(data);
     } catch (err) {
       error('Gagal menambahkan mapel');
     }
@@ -427,14 +349,11 @@ const SuperAdmin = () => {
 
   const handleDeleteMapel = async () => {
     try {
-      const response = await deleteMapel(selectedMapel.id, selectedMapelInstansi);
-      if (response?.status === 'success') {
-        success('Mapel berhasil dihapus');
-        setShowDeleteMapelModal(false);
-        loadMapel();
-      } else {
-        error('Gagal menghapus mapel');
-      }
+      await deleteMapel(selectedMapel.id, selectedMapelInstansi);
+      success('Mapel berhasil dihapus');
+      setShowDeleteMapelModal(false);
+      const data = await getMapel(selectedMapelInstansi);
+      setMapelList(data);
     } catch (err) {
       error('Gagal menghapus mapel');
     }
@@ -450,62 +369,49 @@ const SuperAdmin = () => {
   const [showAddWAGroupModal, setShowAddWAGroupModal] = useState(false);
   const [waGroupForm, setWAGroupForm] = useState({ kelas: '', group_id: '', keterangan: '' });
 
-  const loadWAGroups = async () => {
-    if (!selectedWAInstansi) {
-      setWAGroupsList([]);
-      return;
-    }
-    setWAGroupsLoading(true);
-    try {
-      const [groupsRes, kelasRes] = await Promise.all([
-        getWAGroups(selectedWAInstansi),
-        getKelas(selectedWAInstansi)
-      ]);
-      if (groupsRes?.status === 'success') {
-        setWAGroupsList(groupsRes.data || []);
-      }
-      if (kelasRes?.status === 'success') {
-        setWAKelasList(kelasRes.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading WA groups:', err);
-    } finally {
-      setWAGroupsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (activeTab === 'grup-wa') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'grup-wa' && selectedWAInstansi) {
-      loadWAGroups();
+      setWAGroupsLoading(true);
+      Promise.all([
+        getWAGroups(selectedWAInstansi),
+        getKelas(selectedWAInstansi)
+      ]).then(([groups, kelas]) => {
+        setWAGroupsList(groups);
+        setWAKelasList(kelas);
+        setWAGroupsLoading(false);
+      }).catch(err => {
+        console.error('Error loading WA groups:', err);
+        setWAGroupsLoading(false);
+      });
+    } else if (activeTab === 'grup-wa' && !selectedWAInstansi) {
+      setWAGroupsList([]);
+      setWAKelasList([]);
     }
   }, [activeTab, selectedWAInstansi]);
 
   const handleUpdateWAGroup = async () => {
-    if (!waGroupForm.kelas || !waGroupForm.group_id || !selectedWAInstansi) {
+    if (!waGroupForm.kelas || !waGroupForm.group_id) {
       error('Kelas dan Group ID wajib diisi');
       return;
     }
     try {
-      const response = await updateWAGroup({
+      await updateWAGroup({
         kelas: waGroupForm.kelas,
         group_id: waGroupForm.group_id,
         instansi_id: selectedWAInstansi,
         keterangan: waGroupForm.keterangan
       });
-      if (response?.status === 'success') {
-        success('Grup WA berhasil diupdate');
-        setShowAddWAGroupModal(false);
-        setWAGroupForm({ kelas: '', group_id: '', keterangan: '' });
-        loadWAGroups();
-      } else {
-        error('Gagal mengupdate grup WA');
-      }
+      success('Grup WA berhasil diupdate');
+      setShowAddWAGroupModal(false);
+      setWAGroupForm({ kelas: '', group_id: '', keterangan: '' });
+      const data = await getWAGroups(selectedWAInstansi);
+      setWAGroupsList(data);
     } catch (err) {
       error('Gagal mengupdate grup WA');
     }
@@ -516,85 +422,32 @@ const SuperAdmin = () => {
   // ============================================
   const [waLogsList, setWALogsList] = useState([]);
   const [waLogsLoading, setWALogsLoading] = useState(false);
-  const [waLogsSearch, setWaLogsSearch] = useState('');
   const [selectedLogInstansi, setSelectedLogInstansi] = useState(null);
-  const [selectedLogKelas, setSelectedLogKelas] = useState(null);
-  const [selectedLogStatus, setSelectedLogStatus] = useState(null);
-  const [logDateFrom, setLogDateFrom] = useState(null);
-  const [logDateTo, setLogDateTo] = useState(null);
-  const [logKelasList, setLogKelasList] = useState([]);
-
-  const loadWALogs = async () => {
-    if (!selectedLogInstansi) {
-      setWALogsList([]);
-      return;
-    }
-    setWALogsLoading(true);
-    try {
-      const params = { instansi_id: selectedLogInstansi };
-      if (selectedLogKelas) params.kelas = selectedLogKelas;
-      if (selectedLogStatus) params.status = selectedLogStatus;
-      if (logDateFrom) params.date_from = logDateFrom;
-      if (logDateTo) params.date_to = logDateTo;
-
-      const response = await getWALogs(params);
-      if (response?.status === 'success') {
-        // Sort by waktu descending (newest first) and limit to 50
-        const sorted = (response.data || []).sort((a, b) => 
-          new Date(b.waktu || b.created_at) - new Date(a.waktu || a.created_at)
-        ).slice(0, 50);
-        setWALogsList(sorted);
-      }
-    } catch (err) {
-      console.error('Error loading WA logs:', err);
-    } finally {
-      setWALogsLoading(false);
-    }
-  };
-
-  const loadLogKelas = async () => {
-    if (!selectedLogInstansi) return;
-    try {
-      const response = await getKelas(selectedLogInstansi);
-      if (response?.status === 'success') {
-        setLogKelasList(response.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading kelas:', err);
-    }
-  };
 
   useEffect(() => {
     if (activeTab === 'log-wa') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'log-wa' && selectedLogInstansi) {
-      loadLogKelas();
-      setSelectedLogKelas(null);
-      loadWALogs();
+      setWAGroupsLoading(true);
+      getWALogs(selectedLogInstansi).then(data => {
+        setWALogsList(data);
+        setWAGroupsLoading(false);
+      }).catch(err => {
+        console.error('Error loading WA logs:', err);
+        setWAGroupsLoading(false);
+      });
+    } else if (activeTab === 'log-wa' && !selectedLogInstansi) {
+      setWALogsList([]);
     }
   }, [activeTab, selectedLogInstansi]);
 
-  useEffect(() => {
-    if (activeTab === 'log-wa' && selectedLogInstansi) {
-      loadWALogs();
-    }
-  }, [activeTab, selectedLogKelas, selectedLogStatus, logDateFrom, logDateTo]);
-
-  const filteredLogs = useMemo(() => {
-    if (!waLogsSearch) return waLogsList;
-    return waLogsList.filter(log => 
-      log.judul?.toLowerCase().includes(waLogsSearch.toLowerCase()) ||
-      log.pesan?.toLowerCase().includes(waLogsSearch.toLowerCase())
-    );
-  }, [waLogsList, waLogsSearch]);
-
   const exportCSV = () => {
     const headers = ['No', 'Waktu', 'Kelas', 'Judul PR', 'Status', 'Pesan'];
-    const rows = filteredLogs.map((log, idx) => [
+    const rows = waLogsList.map((log, idx) => [
       idx + 1,
       log.waktu || log.created_at || '-',
       log.kelas || '-',
@@ -602,12 +455,12 @@ const SuperAdmin = () => {
       log.status || '-',
       (log.pesan || '').replace(/\n/g, ' ')
     ]);
-    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => '"' + c + '"').join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `log-wa-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = 'log-wa-' + new Date().toISOString().split('T')[0] + '.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -617,103 +470,35 @@ const SuperAdmin = () => {
   // ============================================
   const [prList, setPRList] = useState([]);
   const [prLoading, setPRLoading] = useState(false);
-  const [prSearch, setPRSearch] = useState('');
   const [selectedPRInstansi, setSelectedPRInstansi] = useState(null);
-  const [selectedPRKelas, setSelectedPRKelas] = useState(null);
-  const [selectedPRMapel, setSelectedPRMapel] = useState(null);
-  const [prKelasList, setPRKelasList] = useState([]);
-  const [prMapelList, setPRMapelList] = useState([]);
-  const [showDeletePRModal, setShowDeletePRModal] = useState(false);
-  const [selectedPR, setSelectedPR] = useState(null);
-
-  const loadPR = async () => {
-    if (!selectedPRInstansi || !selectedPRKelas) {
-      setPRList([]);
-      return;
-    }
-    setPRLoading(true);
-    try {
-      const response = await getPRByKelas(selectedPRKelas, selectedPRInstansi);
-      if (response?.status === 'success') {
-        setPRList(response.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading PR:', err);
-    } finally {
-      setPRLoading(false);
-    }
-  };
-
-  const loadPRKelas = async () => {
-    if (!selectedPRInstansi) return;
-    try {
-      const response = await getKelas(selectedPRInstansi);
-      if (response?.status === 'success') {
-        setPRKelasList(response.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading kelas:', err);
-    }
-  };
-
-  const loadPRMapel = async () => {
-    if (!selectedPRInstansi) return;
-    try {
-      const response = await getMapel(selectedPRInstansi);
-      if (response?.status === 'success') {
-        setPRMapelList(response.data || []);
-      }
-    } catch (err) {
-      console.error('Error loading mapel:', err);
-    }
-  };
 
   useEffect(() => {
     if (activeTab === 'pr') {
-      loadInstansi();
+      getInstansi().then(setInstansiList).catch(console.error);
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'pr' && selectedPRInstansi) {
-      loadPRKelas();
-      loadPRMapel();
-      setSelectedPRKelas(null);
-      setSelectedPRMapel(null);
+      setPRLoading(true);
+      getAllPR(selectedPRInstansi).then(data => {
+        setPRList(data);
+        setPRLoading(false);
+      }).catch(err => {
+        console.error('Error loading PR:', err);
+        setPRLoading(false);
+      });
+    } else if (activeTab === 'pr' && !selectedPRInstansi) {
       setPRList([]);
     }
   }, [activeTab, selectedPRInstansi]);
 
-  useEffect(() => {
-    if (activeTab === 'pr' && selectedPRKelas) {
-      loadPR();
-    }
-  }, [activeTab, selectedPRKelas]);
-
-  const filteredPR = useMemo(() => {
-    let result = prList;
-    if (selectedPRMapel) {
-      result = result.filter(p => p.mapel === selectedPRMapel);
-    }
-    if (prSearch) {
-      result = result.filter(p => 
-        p.judul?.toLowerCase().includes(prSearch.toLowerCase()) ||
-        p.mapel?.toLowerCase().includes(prSearch.toLowerCase())
-      );
-    }
-    return result;
-  }, [prList, selectedPRMapel, prSearch]);
-
-  const handleDeletePR = async () => {
+  const handleDeletePR = async (id) => {
     try {
-      const response = await deletePR(selectedPR.id);
-      if (response?.status === 'success') {
-        success('PR berhasil dihapus');
-        setShowDeletePRModal(false);
-        loadPR();
-      } else {
-        error('Gagal menghapus PR');
-      }
+      await deletePR(id);
+      success('PR berhasil dihapus');
+      const data = await getAllPR(selectedPRInstansi);
+      setPRList(data);
     } catch (err) {
       error('Gagal menghapus PR');
     }
@@ -741,10 +526,12 @@ const SuperAdmin = () => {
   );
 
   const getSelectedInstansiName = () => {
-    const found = instansiList.find(i => i.id === selectedGuruInstansi || i.id === selectedSiswaInstansi || 
-      i.id === selectedKelasInstansi || i.id === selectedMapelInstansi || i.id === selectedWAInstansi || 
-      i.id === selectedLogInstansi || i.id === selectedPRInstansi);
-    return found?.nama || '';
+    const found = instansiList.find(i => 
+      i.id === selectedGuruInstansi || i.id === selectedSiswaInstansi || 
+      i.id === selectedKelasInstansi || i.id === selectedMapelInstansi || 
+      i.id === selectedWAInstansi || i.id === selectedLogInstansi || i.id === selectedPRInstansi
+    );
+    return found ? found.nama : '';
   };
 
   return (
@@ -758,7 +545,7 @@ const SuperAdmin = () => {
                 <h2 className="text-2xl font-bold text-white">Manajemen Instansi</h2>
                 <p className="text-slate-400 text-sm mt-1">Kelola semua instansi pendidikan</p>
               </div>
-              <Button onClick={() => setShowAddInstansiModal(true)}>Tambah Instansi</Button>
+              <Button onClick={() => { setInstansiForm({ nama: '', kode: '', alamat: '' }); setShowAddInstansiModal(true); }}>Tambah Instansi</Button>
             </div>
 
             {instansiLoading ? (
@@ -769,18 +556,16 @@ const SuperAdmin = () => {
                   <table className="w-full">
                     <thead className="bg-slate-700/50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">No</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Nama</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Kode</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Alamat</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Aksi</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">No</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Nama</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Kode</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Alamat</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/50">
                       {instansiList.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="px-4 py-8 text-center text-slate-400">Belum ada instansi</td>
-                        </tr>
+                        <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400">Belum ada instansi</td></tr>
                       ) : (
                         instansiList.map((inst, idx) => (
                           <tr key={inst.id} className={idx % 2 === 0 ? 'bg-slate-800/30' : ''}>
@@ -790,25 +575,8 @@ const SuperAdmin = () => {
                             <td className="px-4 py-3 text-slate-300">{inst.alamat || '-'}</td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedInstansi(inst);
-                                    setInstansiForm({ nama: inst.nama, kode: inst.kode, alamat: inst.alamat || '' });
-                                    setShowEditInstansiModal(true);
-                                  }}
-                                  className="px-3 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedInstansi(inst);
-                                    setShowDeleteInstansiModal(true);
-                                  }}
-                                  className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                                >
-                                  Hapus
-                                </button>
+                                <button onClick={() => { setSelectedInstansi(inst); setInstansiForm({ nama: inst.nama, kode: inst.kode, alamat: inst.alamat || '' }); setShowEditInstansiModal(true); }} className="px-3 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30">Edit</button>
+                                <button onClick={() => { setSelectedInstansi(inst); setShowDeleteInstansiModal(true); }} className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">Hapus</button>
                               </div>
                             </td>
                           </tr>
@@ -830,10 +598,7 @@ const SuperAdmin = () => {
                 <h2 className="text-2xl font-bold text-white">Manajemen Guru</h2>
                 <p className="text-slate-400 text-sm mt-1">Kelola data guru</p>
               </div>
-              <Button onClick={() => {
-                setGuruForm({ nama: '', kode_unik: '', instansi_id: selectedGuruInstansi || '' });
-                setShowAddGuruModal(true);
-              }} disabled={!selectedGuruInstansi}>Tambah Guru</Button>
+              <Button onClick={() => { setGuruForm({ nama: '', kode_unik: '' }); setShowAddGuruModal(true); }} disabled={!selectedGuruInstansi}>Tambah Guru</Button>
             </div>
 
             <FilterBar
@@ -845,7 +610,7 @@ const SuperAdmin = () => {
               onInstansiChange={setSelectedGuruInstansi}
               searchQuery={guruSearch}
               onSearchChange={setGuruSearch}
-              infoText={selectedGuruInstansi ? `Menampilkan ${filteredGuru.length} guru dari ${getSelectedInstansiName()}` : 'Pilih instansi terlebih dahulu'}
+              infoText={selectedGuruInstansi ? 'Menampilkan ' + filteredGuru.length + ' guru dari ' + getSelectedInstansiName() : 'Pilih instansi terlebih dahulu'}
               loading={guruLoading}
             />
 
@@ -864,11 +629,7 @@ const SuperAdmin = () => {
                     {guruLoading ? (
                       <tr><td colSpan="4" className="px-4 py-4"><LoadingSkeleton /></td></tr>
                     ) : filteredGuru.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="px-4 py-8 text-center text-slate-400">
-                          {selectedGuruInstansi ? 'Belum ada guru' : 'Pilih instansi terlebih dahulu'}
-                        </td>
-                      </tr>
+                      <tr><td colSpan="4" className="px-4 py-8 text-center text-slate-400">{selectedGuruInstansi ? 'Belum ada guru' : 'Pilih instansi terlebih dahulu'}</td></tr>
                     ) : (
                       filteredGuru.map((guru, idx) => (
                         <tr key={guru.id} className={idx % 2 === 0 ? 'bg-slate-800/30' : ''}>
@@ -877,12 +638,8 @@ const SuperAdmin = () => {
                           <td className="px-4 py-3 text-slate-300">{guru.kode_unik}</td>
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
-                              <button onClick={() => {
-                                setSelectedGuru(guru);
-                                setGuruForm({ nama: guru.nama, kode_unik: guru.kode_unik, instansi_id: guru.instansi_id });
-                                setShowEditGuruModal(true);
-                              }} className="px-3 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors">Edit</button>
-                              <button onClick={() => { setSelectedGuru(guru); setShowDeleteGuruModal(true); }} className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">Hapus</button>
+                              <button onClick={() => { setSelectedGuru(guru); setGuruForm({ nama: guru.nama, kode_unik: guru.kode_unik }); setShowEditGuruModal(true); }} className="px-3 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-lg">Edit</button>
+                              <button onClick={() => { setSelectedGuru(guru); setShowDeleteGuruModal(true); }} className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg">Hapus</button>
                             </div>
                           </td>
                         </tr>
@@ -918,7 +675,7 @@ const SuperAdmin = () => {
               onKelasChange={setSelectedSiswaKelas}
               searchQuery={siswaSearch}
               onSearchChange={setSiswaSearch}
-              infoText={selectedSiswaKelas ? `Menampilkan ${filteredSiswa.length} siswa dari kelas ${selectedSiswaKelas} — ${getSelectedInstansiName()}` : 'Pilih instansi dan kelas'}
+              infoText={selectedSiswaKelas ? 'Menampilkan ' + filteredSiswa.length + ' siswa dari kelas ' + selectedSiswaKelas + ' - ' + getSelectedInstansiName() : 'Pilih instansi dan kelas'}
               loading={siswaLoading}
             />
 
@@ -932,14 +689,13 @@ const SuperAdmin = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Kelas</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">NISN</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Terdaftar</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {siswaLoading ? (
-                      <tr><td colSpan="6" className="px-4 py-4"><LoadingSkeleton /></td></tr>
+                      <tr><td colSpan="5" className="px-4 py-4"><LoadingSkeleton /></td></tr>
                     ) : filteredSiswa.length === 0 ? (
-                      <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-400">{selectedSiswaKelas ? 'Belum ada siswa' : 'Pilih instansi dan kelas'}</td></tr>
+                      <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400">{selectedSiswaKelas ? 'Belum ada siswa' : 'Pilih instansi dan kelas'}</td></tr>
                     ) : (
                       filteredSiswa.map((siswa, idx) => (
                         <tr key={siswa.id} className={idx % 2 === 0 ? 'bg-slate-800/30' : ''}>
@@ -948,9 +704,6 @@ const SuperAdmin = () => {
                           <td className="px-4 py-3 text-slate-300">{siswa.kelas}</td>
                           <td className="px-4 py-3 text-slate-300">{siswa.nisn || '-'}</td>
                           <td className="px-4 py-3 text-slate-300">{siswa.created_at ? new Date(siswa.created_at).toLocaleDateString('id-ID') : '-'}</td>
-                          <td className="px-4 py-3">
-                            <button onClick={() => { setSelectedSiswa(siswa); setShowDeleteSiswaModal(true); }} className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">Hapus</button>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -971,12 +724,12 @@ const SuperAdmin = () => {
               </div>
               <Button onClick={() => { setKelasForm({ nama: '' }); setShowAddKelasModal(true); }} disabled={!selectedKelasInstansi}>Tambah Kelas</Button>
             </div>
-          
+
             <FilterBar
               showInstansi={true}
               selectedInstansi={selectedKelasInstansi}
               onInstansiChange={setSelectedKelasInstansi}
-              infoText={selectedKelasInstansi ? `${kelasList.length} kelas terdaftar di ${getSelectedInstansiName()}` : 'Pilih instansi'}
+              infoText={selectedKelasInstansi ? kelasList.length + ' kelas terdaftar di ' + getSelectedInstansiName() : 'Pilih instansi'}
               loading={kelasLoading}
             />
 
@@ -1033,7 +786,7 @@ const SuperAdmin = () => {
               onInstansiChange={setSelectedMapelInstansi}
               searchQuery={mapelSearch}
               onSearchChange={setMapelSearch}
-              infoText={selectedMapelInstansi ? `${filteredMapel.length} mata pelajaran di ${getSelectedInstansiName()}` : 'Pilih instansi'}
+              infoText={selectedMapelInstansi ? filteredMapel.length + ' mata pelajaran di ' + getSelectedInstansiName() : 'Pilih instansi'}
               loading={mapelLoading}
             />
 
@@ -1085,7 +838,7 @@ const SuperAdmin = () => {
               showInstansi={true}
               selectedInstansi={selectedWAInstansi}
               onInstansiChange={setSelectedWAInstansi}
-              infoText={selectedWAInstansi ? `${waGroupsList.filter(g => g.group_id && g.group_id !== 'PENDING').length} grup aktif dari ${waKelasList.length} total kelas` : 'Pilih instansi'}
+              infoText={selectedWAInstansi ? waGroupsList.filter(g => g.group_id && g.group_id !== 'PENDING').length + ' grup aktif dari ' + waKelasList.length + ' total kelas' : 'Pilih instansi'}
               loading={waGroupsLoading}
             />
 
@@ -1097,22 +850,20 @@ const SuperAdmin = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">No</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Kelas</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Group ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Keterangan</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {waGroupsLoading ? (
-                      <tr><td colSpan="5" className="px-4 py-4"><LoadingSkeleton /></td></tr>
+                      <tr><td colSpan="4" className="px-4 py-4"><LoadingSkeleton /></td></tr>
                     ) : waGroupsList.length === 0 ? (
-                      <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400">{selectedWAInstansi ? 'Belum ada data grup WA' : 'Pilih instansi'}</td></tr>
+                      <tr><td colSpan="4" className="px-4 py-8 text-center text-slate-400">{selectedWAInstansi ? 'Belum ada data grup WA' : 'Pilih instansi'}</td></tr>
                     ) : (
                       waGroupsList.map((group, idx) => (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-slate-800/30' : ''}>
                           <td className="px-4 py-3 text-slate-300">{idx + 1}</td>
                           <td className="px-4 py-3 text-white font-medium">{group.kelas}</td>
                           <td className="px-4 py-3 text-slate-300 font-mono text-sm">{group.group_id || '-'}</td>
-                          <td className="px-4 py-3 text-slate-300">{group.keterangan || '-'}</td>
                           <td className="px-4 py-3">
                             <Badge variant={group.group_id && group.group_id !== 'PENDING' ? 'success' : 'danger'}>
                               {group.group_id && group.group_id !== 'PENDING' ? 'Aktif' : 'Belum diisi'}
@@ -1136,35 +887,14 @@ const SuperAdmin = () => {
                 <h2 className="text-2xl font-bold text-white">Log WhatsApp</h2>
                 <p className="text-slate-400 text-sm mt-1">Riwayat pengiriman notifikasi WA</p>
               </div>
-              <Button onClick={exportCSV} disabled={filteredLogs.length === 0}>Export CSV</Button>
+              <Button onClick={exportCSV} disabled={waLogsList.length === 0}>Export CSV</Button>
             </div>
 
             <FilterBar
               showInstansi={true}
-              showKelas={true}
-              showStatus={true}
-              showDateRange={true}
-              showSearch={true}
-              searchPlaceholder="Cari judul PR..."
-              statusOptions={[
-                { value: 'terkirim', label: 'Terkirim' },
-                { value: 'gagal', label: 'Gagal' }
-              ]}
-              instansiList={instansiList}
-              kelasList={logKelasList}
               selectedInstansi={selectedLogInstansi}
-              selectedKelas={selectedLogKelas}
-              selectedStatus={selectedLogStatus}
-              dateFrom={logDateFrom}
-              dateTo={logDateTo}
               onInstansiChange={setSelectedLogInstansi}
-              onKelasChange={setSelectedLogKelas}
-              onStatusChange={setSelectedLogStatus}
-              onDateFromChange={setLogDateFrom}
-              onDateToChange={setLogDateTo}
-              searchQuery={waLogsSearch}
-              onSearchChange={setWaLogsSearch}
-              infoText={selectedLogInstansi ? `Menampilkan ${filteredLogs.length} log` : 'Pilih instansi'}
+              infoText={selectedLogInstansi ? 'Menampilkan ' + waLogsList.length + ' log' : 'Pilih instansi'}
               loading={waLogsLoading}
             />
 
@@ -1176,29 +906,25 @@ const SuperAdmin = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">No</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Waktu</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Kelas</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Judul PR</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Pesan</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {waLogsLoading ? (
-                      <tr><td colSpan="5" className="px-4 py-4"><LoadingSkeleton /></td></tr>
-                    ) : filteredLogs.length === 0 ? (
-                      <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400">{selectedLogInstansi ? 'Belum ada log' : 'Pilih instansi'}</td></tr>
+                      <tr><td colSpan="4" className="px-4 py-4"><LoadingSkeleton /></td></tr>
+                    ) : waLogsList.length === 0 ? (
+                      <tr><td colSpan="4" className="px-4 py-8 text-center text-slate-400">{selectedLogInstansi ? 'Belum ada log' : 'Pilih instansi'}</td></tr>
                     ) : (
-                      filteredLogs.map((log, idx) => (
+                      waLogsList.map((log, idx) => (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-slate-800/30' : ''}>
                           <td className="px-4 py-3 text-slate-300">{idx + 1}</td>
                           <td className="px-4 py-3 text-slate-300">{log.waktu ? new Date(log.waktu).toLocaleString('id-ID') : '-'}</td>
                           <td className="px-4 py-3 text-white">{log.kelas || '-'}</td>
-                          <td className="px-4 py-3 text-slate-300">{log.judul || '-'}</td>
                           <td className="px-4 py-3">
                             <Badge variant={log.status === 'terkirim' ? 'success' : 'danger'}>
                               {log.status === 'terkirim' ? 'Terkirim' : 'Gagal'}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-slate-300 text-sm max-w-xs truncate">{log.pesan || '-'}</td>
                         </tr>
                       ))
                     )}
@@ -1221,26 +947,9 @@ const SuperAdmin = () => {
 
             <FilterBar
               showInstansi={true}
-              showKelas={true}
-              showMapel={true}
-              showSearch={true}
-              searchPlaceholder="Cari judul PR..."
-              statusOptions={[
-                { value: 'terkirim', label: 'Terkirim' },
-                { value: 'gagal', label: 'Gagal' }
-              ]}
-              instansiList={instansiList}
-              kelasList={prKelasList}
-              mapelList={prMapelList}
               selectedInstansi={selectedPRInstansi}
-              selectedKelas={selectedPRKelas}
-              selectedMapel={selectedPRMapel}
               onInstansiChange={setSelectedPRInstansi}
-              onKelasChange={setSelectedPRKelas}
-              onMapelChange={setSelectedPRMapel}
-              searchQuery={prSearch}
-              onSearchChange={setPRSearch}
-              infoText={selectedPRKelas ? `Menampilkan ${filteredPR.length} PR` : 'Pilih instansi dan kelas'}
+              infoText={selectedPRInstansi ? 'Menampilkan ' + prList.length + ' PR' : 'Pilih instansi'}
               loading={prLoading}
             />
 
@@ -1252,32 +961,28 @@ const SuperAdmin = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">No</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Mapel</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Judul</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Kelas</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Deadline</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">WA</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {prLoading ? (
                       <tr><td colSpan="6" className="px-4 py-4"><LoadingSkeleton /></td></tr>
-                    ) : filteredPR.length === 0 ? (
-                      <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-400">{selectedPRKelas ? 'Belum ada PR' : 'Pilih instansi dan kelas'}</td></tr>
+                    ) : prList.length === 0 ? (
+                      <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-400">{selectedPRInstansi ? 'Belum ada PR' : 'Pilih instansi'}</td></tr>
                     ) : (
-                      filteredPR.map((pr, idx) => (
+                      prList.map((pr, idx) => (
                         <tr key={pr.id} className={idx % 2 === 0 ? 'bg-slate-800/30' : ''}>
                           <td className="px-4 py-3 text-slate-300">{idx + 1}</td>
                           <td className="px-4 py-3 text-white">{pr.mapel}</td>
                           <td className="px-4 py-3 text-slate-300">{pr.judul}</td>
+                          <td className="px-4 py-3 text-slate-300">{pr.kelas}</td>
                           <td className="px-4 py-3">
                             <Badge variant={getDeadlineVariant(pr.deadline)}>{pr.deadline}</Badge>
                           </td>
                           <td className="px-4 py-3">
-                            <Badge variant={pr.wa_status === 'terkirim' ? 'success' : pr.wa_status === 'gagal' ? 'danger' : 'neutral'}>
-                              {pr.wa_status === 'terkirim' ? 'Terkirim' : pr.wa_status === 'gagal' ? 'Gagal' : '-'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <button onClick={() => { setSelectedPR(pr); setShowDeletePRModal(true); }} className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">Hapus</button>
+                            <button onClick={() => handleDeletePR(pr.id)} className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">Hapus</button>
                           </td>
                         </tr>
                       ))
@@ -1291,7 +996,6 @@ const SuperAdmin = () => {
       </div>
 
       {/* MODALS */}
-      {/* Add Instansi Modal */}
       <Modal isOpen={showAddInstansiModal} onClose={() => setShowAddInstansiModal(false)} title="Tambah Instansi">
         <div className="space-y-4">
           <div>
@@ -1304,7 +1008,7 @@ const SuperAdmin = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">Alamat</label>
-            <textarea value={instansiForm.alamat} onChange={(e) => setInstansiForm({ ...instansiForm, alamat: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" rows="3" placeholder="Alamat lengkap"></textarea>
+            <textarea value={instansiForm.alamat} onChange={(e) => setInstansiForm({ ...instansiForm, alamat: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" rows="3"></textarea>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary" onClick={() => setShowAddInstansiModal(false)}>Batal</Button>
@@ -1313,7 +1017,6 @@ const SuperAdmin = () => {
         </div>
       </Modal>
 
-      {/* Edit Instansi Modal */}
       <Modal isOpen={showEditInstansiModal} onClose={() => setShowEditInstansiModal(false)} title="Edit Instansi">
         <div className="space-y-4">
           <div>
@@ -1335,25 +1038,23 @@ const SuperAdmin = () => {
         </div>
       </Modal>
 
-      {/* Delete Instansi Modal */}
       <Modal isOpen={showDeleteInstansiModal} onClose={() => setShowDeleteInstansiModal(false)} title="Hapus Instansi">
-        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus instansi <strong className="text-white">{selectedInstansi?.nama}</strong>?</p>
+        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus instansi <strong className="text-white">{selectedInstansi ? selectedInstansi.nama : ''}</strong>?</p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setShowDeleteInstansiModal(false)}>Batal</Button>
           <Button variant="danger" onClick={handleDeleteInstansi}>Hapus</Button>
         </div>
       </Modal>
 
-      {/* Add Guru Modal */}
       <Modal isOpen={showAddGuruModal} onClose={() => setShowAddGuruModal(false)} title="Tambah Guru">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">Nama Guru</label>
-            <input type="text" value={guruForm.nama} onChange={(e) => setGuruForm({ ...guruForm, nama: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Nama lengkap" />
+            <input type="text" value={guruForm.nama} onChange={(e) => setGuruForm({ ...guruForm, nama: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">Kode Unik (NIP)</label>
-            <input type="text" value={guruForm.kode_unik} onChange={(e) => setGuruForm({ ...guruForm, kode_unik: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="NIP atau kode khusus" />
+            <input type="text" value={guruForm.kode_unik} onChange={(e) => setGuruForm({ ...guruForm, kode_unik: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary" onClick={() => setShowAddGuruModal(false)}>Batal</Button>
@@ -1362,7 +1063,6 @@ const SuperAdmin = () => {
         </div>
       </Modal>
 
-      {/* Edit Guru Modal */}
       <Modal isOpen={showEditGuruModal} onClose={() => setShowEditGuruModal(false)} title="Edit Guru">
         <div className="space-y-4">
           <div>
@@ -1380,25 +1080,14 @@ const SuperAdmin = () => {
         </div>
       </Modal>
 
-      {/* Delete Guru Modal */}
       <Modal isOpen={showDeleteGuruModal} onClose={() => setShowDeleteGuruModal(false)} title="Hapus Guru">
-        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus guru <strong className="text-white">{selectedGuru?.nama}</strong>?</p>
+        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus guru <strong className="text-white">{selectedGuru ? selectedGuru.nama : ''}</strong>?</p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setShowDeleteGuruModal(false)}>Batal</Button>
           <Button variant="danger" onClick={handleDeleteGuru}>Hapus</Button>
         </div>
       </Modal>
 
-      {/* Delete Siswa Modal */}
-      <Modal isOpen={showDeleteSiswaModal} onClose={() => setShowDeleteSiswaModal(false)} title="Hapus Siswa">
-        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus siswa <strong className="text-white">{selectedSiswa?.nama}</strong>?</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setShowDeleteSiswaModal(false)}>Batal</Button>
-          <Button variant="danger" onClick={() => { error('Fitur hapus siswa belum tersedia'); setShowDeleteSiswaModal(false); }}>Hapus</Button>
-        </div>
-      </Modal>
-
-      {/* Add Kelas Modal */}
       <Modal isOpen={showAddKelasModal} onClose={() => setShowAddKelasModal(false)} title="Tambah Kelas">
         <div className="space-y-4">
           <div>
@@ -1412,16 +1101,14 @@ const SuperAdmin = () => {
         </div>
       </Modal>
 
-      {/* Delete Kelas Modal */}
       <Modal isOpen={showDeleteKelasModal} onClose={() => setShowDeleteKelasModal(false)} title="Hapus Kelas">
-        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus kelas <strong className="text-white">{selectedKelas?.nama}</strong>?</p>
+        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus kelas <strong className="text-white">{selectedKelas ? selectedKelas.nama : ''}</strong>?</p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setShowDeleteKelasModal(false)}>Batal</Button>
           <Button variant="danger" onClick={handleDeleteKelas}>Hapus</Button>
         </div>
       </Modal>
 
-      {/* Add Mapel Modal */}
       <Modal isOpen={showAddMapelModal} onClose={() => setShowAddMapelModal(false)} title="Tambah Mapel">
         <div className="space-y-4">
           <div>
@@ -1435,16 +1122,14 @@ const SuperAdmin = () => {
         </div>
       </Modal>
 
-      {/* Delete Mapel Modal */}
       <Modal isOpen={showDeleteMapelModal} onClose={() => setShowDeleteMapelModal(false)} title="Hapus Mapel">
-        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus mapel <strong className="text-white">{selectedMapel?.nama}</strong>?</p>
+        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus mapel <strong className="text-white">{selectedMapel ? selectedMapel.nama : ''}</strong>?</p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setShowDeleteMapelModal(false)}>Batal</Button>
           <Button variant="danger" onClick={handleDeleteMapel}>Hapus</Button>
         </div>
       </Modal>
 
-      {/* Update WA Group Modal */}
       <Modal isOpen={showAddWAGroupModal} onClose={() => setShowAddWAGroupModal(false)} title="Update Grup WhatsApp">
         <div className="space-y-4">
           <div>
@@ -1462,21 +1147,12 @@ const SuperAdmin = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">Keterangan</label>
-            <input type="text" value={waGroupForm.keterangan} onChange={(e) => setWAGroupForm({ ...waGroupForm, keterangan: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Contoh: Grup WA XI RPL" />
+            <input type="text" value={waGroupForm.keterangan} onChange={(e) => setWAGroupForm({ ...waGroupForm, keterangan: e.target.value })} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary" onClick={() => setShowAddWAGroupModal(false)}>Batal</Button>
             <Button onClick={handleUpdateWAGroup}>Simpan</Button>
           </div>
-        </div>
-      </Modal>
-
-      {/* Delete PR Modal */}
-      <Modal isOpen={showDeletePRModal} onClose={() => setShowDeletePRModal(false)} title="Hapus PR">
-        <p className="text-slate-300 mb-4">Apakah Anda yakin ingin menghapus PR <strong className="text-white">{selectedPR?.judul}</strong>?</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setShowDeletePRModal(false)}>Batal</Button>
-          <Button variant="danger" onClick={handleDeletePR}>Hapus</Button>
         </div>
       </Modal>
 
@@ -1486,4 +1162,3 @@ const SuperAdmin = () => {
 };
 
 export default SuperAdmin;
-      
