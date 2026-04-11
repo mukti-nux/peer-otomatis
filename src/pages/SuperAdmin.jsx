@@ -7,12 +7,12 @@ import Badge from '../components/Badge';
 import { ToastContainer, useToast } from '../components/Toast';
 import {
   getInstansi, addInstansi, updateInstansi, deleteInstansi,
-  getUsers, addGuru, updateGuru, deleteGuru,
+  getUsers, addGuru, updateGuru, deleteUser,
   getKelas, addKelas, deleteKelas,
   getMapel, addMapel, deleteMapel,
   getWAGroups, updateWAGroup,
   getWALogs,
-  getAllPR, deletePR
+  getPRAllKelas, deletePR
 } from '../services/api';
 
 const SuperAdmin = () => {
@@ -174,7 +174,7 @@ const SuperAdmin = () => {
 
   const handleDeleteGuru = async () => {
     try {
-      await deleteGuru(selectedGuru.id);
+      await deleteUser(selectedGuru.id);
       success('Guru berhasil dihapus');
       setShowDeleteGuruModal(false);
       const data = await getUsers(selectedGuruInstansi, 'guru');
@@ -481,7 +481,7 @@ const SuperAdmin = () => {
   useEffect(() => {
     if (activeTab === 'pr' && selectedPRInstansi) {
       setPRLoading(true);
-      getAllPR(selectedPRInstansi).then(data => {
+      getPRAllKelas(selectedPRInstansi).then(data => {
         setPRList(data);
         setPRLoading(false);
       }).catch(err => {
@@ -497,7 +497,7 @@ const SuperAdmin = () => {
     try {
       await deletePR(id);
       success('PR berhasil dihapus');
-      const data = await getAllPR(selectedPRInstansi);
+      const data = await getPRAllKelas(selectedPRInstansi);
       setPRList(data);
     } catch (err) {
       error('Gagal menghapus PR');

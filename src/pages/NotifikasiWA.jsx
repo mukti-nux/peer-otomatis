@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import Button from '../components/Button';
 import Badge from '../components/Badge';
 import { ToastContainer, useToast } from '../components/Toast';
-import { getAllPR } from '../services/api';
+import { getPRAllKelas } from '../services/api';
 
 const NotifikasiWA = () => {
   const navigate = useNavigate();
@@ -32,16 +31,12 @@ const NotifikasiWA = () => {
   const fetchData = async (instansiId) => {
     setLoading(true);
     try {
-      const response = await getAllPR(instansiId);
-      if (response?.status === 'success' && response?.data) {
-        // Filter PR dengan wa_status
-        const prWithWAStatus = response.data.filter(pr => pr.wa_status);
-        // Sort by created_at descending (terbaru dulu)
-        prWithWAStatus.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setPrList(prWithWAStatus);
-      } else {
-        setPrList([]);
-      }
+      const data = await getPRAllKelas(instansiId);
+      // Filter PR dengan wa_status
+      const prWithWAStatus = data.filter(pr => pr.wa_status);
+      // Sort by created_at descending (terbaru dulu)
+      prWithWAStatus.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setPrList(prWithWAStatus);
     } catch (error) {
       console.error('Error fetching PR:', error);
       toast.error('Gagal memuat data');

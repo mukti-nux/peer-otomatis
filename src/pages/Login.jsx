@@ -27,8 +27,12 @@ const Login = () => {
   }, []);
   
   useEffect(() => {
-    if (role === 'guru' && selectedInstansi) fetchGuruList();
-    if (role === 'siswa' && selectedInstansi) fetchKelasList();
+    if (role === 'guru' && selectedInstansi) {
+      fetchGuruList(selectedInstansi);
+    }
+    if (role === 'siswa' && selectedInstansi) {
+      fetchKelasList(selectedInstansi);
+    }
   }, [selectedInstansi, role]);
   
   useEffect(() => {
@@ -42,11 +46,9 @@ const Login = () => {
   const fetchInstansi = async () => {
     setInstansiLoading(true);
     try {
-      const response = await getInstansi();
-      if (response?.status === 'success' && response?.data) {
-        setInstansiList(response.data);
-        if (response.data.length === 1) setSelectedInstansi(response.data[0].id);
-      }
+      const data = await getInstansi();
+      setInstansiList(data);
+      if (data.length === 1) setSelectedInstansi(data[0].id);
     } catch (err) {
       console.error('Error fetching instansi:', err);
       setError('Gagal mengambil daftar instansi');
@@ -55,11 +57,11 @@ const Login = () => {
     }
   };
   
-  const fetchGuruList = async () => {
+  const fetchGuruList = async (instansi_id) => {
     setGuruLoading(true);
     try {
-      const response = await getUsers(selectedInstansi, 'guru');
-      if (response?.status === 'success' && response?.data) setGuruList(response.data);
+      const data = await getUsers(instansi_id, 'guru');
+      setGuruList(data);
     } catch (err) {
       console.error('Error fetching guru list:', err);
     } finally {
@@ -67,11 +69,11 @@ const Login = () => {
     }
   };
   
-  const fetchKelasList = async () => {
+  const fetchKelasList = async (instansi_id) => {
     setKelasLoading(true);
     try {
-      const response = await getKelas(selectedInstansi);
-      if (response?.status === 'success' && response?.data) setKelasList(response.data);
+      const data = await getKelas(instansi_id);
+      setKelasList(data);
     } catch (err) {
       console.error('Error fetching kelas list:', err);
     } finally {
@@ -114,8 +116,12 @@ const Login = () => {
       const response = await loginGuru(selectedInstansi, selectedGuru, kodeUnik);
       if (response?.status === 'success' && response?.data) {
         const userData = {
-          id: response.data.id, nama: response.data.nama, role: response.data.role,
-          kelas: null, instansi_id: response.data.instansi_id, instansi: response.data.instansi
+          id: response.data.id, 
+          nama: response.data.nama, 
+          role: response.data.role,
+          kelas: null, 
+          instansi_id: response.data.instansi_id, 
+          instansi: response.data.instansi
         };
         localStorage.setItem('user_session', JSON.stringify(userData));
         navigate('/dashboard-guru');
@@ -136,13 +142,19 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await registerSiswa({
-        nama: namaLengkap.trim(), kelas: selectedKelas, instansi_id: selectedInstansi, nisn: nisn.trim()
+        nama: namaLengkap.trim(), 
+        kelas: selectedKelas, 
+        instansi_id: selectedInstansi, 
+        nisn: nisn.trim()
       });
       if (response?.status === 'success' && response?.data) {
         const selectedInstansiData = instansiList.find(i => i.id === selectedInstansi);
         const userData = {
-          id: response.data.id, nama: response.data.nama, role: response.data.role,
-          kelas: response.data.kelas, instansi_id: response.data.instansi_id,
+          id: response.data.id, 
+          nama: response.data.nama, 
+          role: response.data.role,
+          kelas: response.data.kelas, 
+          instansi_id: response.data.instansi_id,
           instansi: selectedInstansiData?.nama || ''
         };
         localStorage.setItem('user_session', JSON.stringify(userData));
@@ -179,8 +191,11 @@ const Login = () => {
             {instansiLoading ? (
               <div className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-slate-50 text-slate-500">Memuat...</div>
             ) : (
-              <select value={selectedInstansi} onChange={handleInstansiChange}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+              <select 
+                value={selectedInstansi} 
+                onChange={handleInstansiChange}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+              >
                 <option value="">Pilih Instansi</option>
                 {instansiList.map(instansi => (
                   <option key={instansi.id} value={instansi.id}>{instansi.nama} ({instansi.kode})</option>
@@ -216,17 +231,27 @@ const Login = () => {
                 {guruLoading ? (
                   <div className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-slate-50 text-slate-500">Memuat...</div>
                 ) : (
-                  <select value={selectedGuru} onChange={(e) => setSelectedGuru(Number(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                  <select 
+                    value={selectedGuru} 
+                    onChange={(e) => setSelectedGuru(Number(e.target.value))}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  >
                     <option value="">Pilih Guru</option>
-                    {guruList.map(guru => <option key={guru.id} value={guru.id}>{guru.nama}</option>)}
+                    {guruList.map(guru => (
+                      <option key={guru.id} value={guru.id}>{guru.nama}</option>
+                    ))}
                   </select>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Kode Unik <span className="text-red-500">*</span></label>
-                <input type="text" value={kodeUnik} onChange={(e) => setKodeUnik(e.target.value)} placeholder="Masukkan kode unik"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+                <input 
+                  type="text" 
+                  value={kodeUnik} 
+                  onChange={(e) => setKodeUnik(e.target.value)} 
+                  placeholder="Masukkan kode unik"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                />
               </div>
             </div>
           )}
@@ -235,25 +260,40 @@ const Login = () => {
             <div className="animate-fadeIn space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Nama Lengkap <span className="text-red-500">*</span></label>
-                <input type="text" value={namaLengkap} onChange={(e) => setNamaLengkap(e.target.value)} placeholder="Masukkan nama lengkap"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+                <input 
+                  type="text" 
+                  value={namaLengkap} 
+                  onChange={(e) => setNamaLengkap(e.target.value)} 
+                  placeholder="Masukkan nama lengkap"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Kelas <span className="text-red-500">*</span></label>
                 {kelasLoading ? (
                   <div className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-slate-50 text-slate-500">Memuat...</div>
                 ) : (
-                  <select value={selectedKelas} onChange={(e) => setSelectedKelas(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                  <select 
+                    value={selectedKelas} 
+                    onChange={(e) => setSelectedKelas(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  >
                     <option value="">Pilih Kelas</option>
-                    {kelasList.map(kelas => <option key={kelas.id} value={kelas.nama}>{kelas.nama}</option>)}
+                    {kelasList.map(kelas => (
+                      <option key={kelas.id} value={kelas.nama}>{kelas.nama}</option>
+                    ))}
                   </select>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">NISN <span className="text-slate-400">(opsional)</span></label>
-                <input type="text" value={nisn} onChange={(e) => setNisn(e.target.value)} placeholder="Masukkan NISN"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" />
+                <input 
+                  type="text" 
+                  value={nisn} 
+                  onChange={(e) => setNisn(e.target.value)} 
+                  placeholder="Masukkan NISN"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                />
               </div>
             </div>
           )}

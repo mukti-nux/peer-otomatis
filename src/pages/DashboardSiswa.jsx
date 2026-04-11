@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import PRCard from '../components/PRCard';
 import { ToastContainer, useToast } from '../components/Toast';
-import { getPRByKelas } from '../services/api';
+import { getPR } from '../services/api';
 
 const DashboardSiswa = () => {
   const navigate = useNavigate();
@@ -39,16 +39,12 @@ const DashboardSiswa = () => {
   const fetchData = async (kelas, instansiId) => {
     setLoading(true);
     try {
-      const response = await getPRByKelas(kelas, instansiId);
-      if (response?.status === 'success' && response?.data) {
-        const sorted = response.data.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-        setPrList(sorted);
-      } else {
-        setPrList([]);
-      }
+      const data = await getPR(kelas, instansiId);
+      const sorted = data.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      setPrList(sorted);
     } catch (error) {
       console.error('Error fetching PR:', error);
-      toast.error('Gagal terhubung ke server, coba lagi');
+      toast.error('Gagal terhubung ke server');
       setPrList([]);
     } finally {
       setLoading(false);

@@ -5,7 +5,7 @@ import Button from '../components/Button';
 import PRTable from '../components/PRTable';
 import PRModal from '../components/PRModal';
 import { ToastContainer, useToast } from '../components/Toast';
-import { createPR, getAllPR, updatePR, deletePR, getKelas, getMapel } from '../services/api';
+import { createPR, getPRAllKelas, updatePR, deletePR, getKelas, getMapel, kirimWA } from '../services/api';
 
 const DashboardGuru = () => {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ const DashboardGuru = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [filterKelas, setFilterKelas] = useState('');
   const [kelasList, setKelasList] = useState([]);
+  const [mapelList, setMapelList] = useState([]);
   
   useEffect(() => {
     const session = localStorage.getItem('user_session');
@@ -34,33 +35,36 @@ const DashboardGuru = () => {
       return;
     }
     setUser(userData);
-    fetchKelas(userData.instansi_id);
-    fetchData(userData.instansi_id);
-  }, [navigate]);
-  
-  const fetchKelas = async (instansiId) => {
-    try {
-      const response = await getKelas(instansiId);
-      if (response?.status === 'success' && response?.data) {
-        setKelasList(response.data);
+    
+    // Fetch all data in parallel
+    const init = async () => {
+      try {
+        const [kelas, mapel, pr] = await Promise.all([
+          getKelas(userData.instansi_id),
+          getMapel(userData.instansi_id),
+          getPRAllKelas(userData.instansi_id)
+        ]);
+        setKelasList(kelas);
+        setMapelList(mapel);
+        setPrList(pr);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        toast.error('Gagal terhubung ke server');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Error fetching kelas:', err);
-    }
-  };
+    };
+    init();
+  }, [navigate]);
   
   const fetchData = async (instansiId) => {
     setLoading(true);
     try {
-      const response = await getAllPR(instansiId);
-      if (response?.status === 'success' && response?.data) {
-        setPrList(response.data);
-      } else {
-        setPrList([]);
-      }
+      const pr = await getPRAllKelas(instansiId);
+      setPrList(pr);
     } catch (error) {
       console.error('Error fetching PR:', error);
-      toast.error('Gagal terhubung ke server, coba lagi');
+      toast.error('Gagal terhubung ke server');
       setPrList([]);
     } finally {
       setLoading(false);
@@ -96,8 +100,26 @@ const DashboardGuru = () => {
         await updatePR({ ...payload, id: editData.id });
         toast.success('PR berhasil diperbarui');
       } else {
-        await createPR(payload);
-        toast.success('PR berhasil dibuat');
+        const result = await createPR(payload);
+        if (result.status === 'success') {
+          toast.success('PR berhasil dibuat');
+          // Send WA if requested
+          if (formData.kirim_wa && result.data) {
+            try {
+              await kirimWA({
+                kelas: formData.kelas,
+                instansi_id: user.instansi_id,
+                pr_id: result.data.id,
+                judul: result.data.judul,
+                mapel: formData.mapel,
+                pesan: `📚 *PR BARU — ${formData.kelas}*\n\nMapel     : ${formData.mapel}\nJudul     : ${result.data.judul}\nDeskripsi : ${formData.deskripsi || '-'}\nDeadline  : ${formData.deadline} ⏰\nDari Guru : ${user.nama}\n\nSegera dikerjakan ya! 💪\n— Sistem PR Sekolah`
+              });
+              toast.success('Notifikasi WA terkirim');
+            } catch (waErr) {
+              console.error('Error sending WA:', waErr);
+            }
+          }
+        }
       }
       
       setIsPRModalOpen(false);
@@ -183,6 +205,7 @@ const DashboardGuru = () => {
         editData={editData}
         loading={submitLoading}
         kelasList={kelasList}
+        mapelList={mapelList}
         user={user}
       />
       

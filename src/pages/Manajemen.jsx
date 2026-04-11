@@ -37,13 +37,12 @@ const Manajemen = () => {
   const fetchData = async (instansiId) => {
     setLoading(true);
     try {
-      const [kelasRes, mapelRes] = await Promise.all([
+      const [kelas, mapel] = await Promise.all([
         getKelas(instansiId),
         getMapel(instansiId)
       ]);
-      
-      if (kelasRes?.status === 'success') setKelasList(kelasRes.data || []);
-      if (mapelRes?.status === 'success') setMapelList(mapelRes.data || []);
+      setKelasList(kelas);
+      setMapelList(mapel);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Gagal memuat data');
@@ -58,14 +57,10 @@ const Manajemen = () => {
     
     setSubmitLoading(true);
     try {
-      const response = await addKelas(newKelas.trim(), user.instansi_id);
-      if (response?.status === 'success') {
-        toast.success('Kelas berhasil ditambahkan');
-        setNewKelas('');
-        fetchData(user.instansi_id);
-      } else {
-        toast.error(response?.message || 'Gagal menambahkan kelas');
-      }
+      await addKelas(newKelas.trim(), user.instansi_id);
+      toast.success('Kelas berhasil ditambahkan');
+      setNewKelas('');
+      fetchData(user.instansi_id);
     } catch (error) {
       console.error('Error adding kelas:', error);
       toast.error('Gagal menambahkan kelas');
@@ -75,17 +70,13 @@ const Manajemen = () => {
   };
   
   const handleDeleteKelas = async (id) => {
-    if (!confirm('Yakin ingin menghapus kelas ini?')) return;
+    if (!window.confirm('Yakin ingin menghapus kelas ini?')) return;
     
     setSubmitLoading(true);
     try {
-      const response = await deleteKelas(id, user.instansi_id);
-      if (response?.status === 'success') {
-        toast.success('Kelas berhasil dihapus');
-        fetchData(user.instansi_id);
-      } else {
-        toast.error(response?.message || 'Gagal menghapus kelas');
-      }
+      await deleteKelas(id, user.instansi_id);
+      toast.success('Kelas berhasil dihapus');
+      fetchData(user.instansi_id);
     } catch (error) {
       console.error('Error deleting kelas:', error);
       toast.error('Gagal menghapus kelas');
@@ -100,14 +91,10 @@ const Manajemen = () => {
     
     setSubmitLoading(true);
     try {
-      const response = await addMapel(newMapel.trim(), user.instansi_id);
-      if (response?.status === 'success') {
-        toast.success('Mapel berhasil ditambahkan');
-        setNewMapel('');
-        fetchData(user.instansi_id);
-      } else {
-        toast.error(response?.message || 'Gagal menambahkan mapel');
-      }
+      await addMapel(newMapel.trim(), user.instansi_id);
+      toast.success('Mapel berhasil ditambahkan');
+      setNewMapel('');
+      fetchData(user.instansi_id);
     } catch (error) {
       console.error('Error adding mapel:', error);
       toast.error('Gagal menambahkan mapel');
@@ -117,17 +104,13 @@ const Manajemen = () => {
   };
   
   const handleDeleteMapel = async (id) => {
-    if (!confirm('Yakin ingin menghapus mapel ini?')) return;
+    if (!window.confirm('Yakin ingin menghapus mapel ini?')) return;
     
     setSubmitLoading(true);
     try {
-      const response = await deleteMapel(id, user.instansi_id);
-      if (response?.status === 'success') {
-        toast.success('Mapel berhasil dihapus');
-        fetchData(user.instansi_id);
-      } else {
-        toast.error(response?.message || 'Gagal menghapus mapel');
-      }
+      await deleteMapel(id, user.instansi_id);
+      toast.success('Mapel berhasil dihapus');
+      fetchData(user.instansi_id);
     } catch (error) {
       console.error('Error deleting mapel:', error);
       toast.error('Gagal menghapus mapel');
